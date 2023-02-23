@@ -1,0 +1,18 @@
+service: lambda-chatgpt-slack-bot
+provider:
+  name: aws
+  runtime: python3.8
+  region: us-east-1
+functions:
+  chatgpt:
+    handler: handler.handle_message
+    events:
+      - http:
+          method: post
+          path: /slack/events
+    environment:
+      OPENAI_API_KEY: OPENAI_API_KEY
+      SLACK_APP_TOKEN: SLACK_APP_TOKEN
+      SLACK_BOT_TOKEN: SLACK_BOT_TOKEN
+plugins:
+  - serverless-python-requirements
