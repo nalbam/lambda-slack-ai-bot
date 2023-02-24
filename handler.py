@@ -150,5 +150,18 @@ def lambda_handler(event, context):
             "body": json.dumps({"challenge": body["challenge"]}),
         }
 
+    print("lambda_handler: {}".format(body))
+
+    token = body["event"]["client_msg_id"]
+    prompt = get_context(token)
+    if prompt == "":
+        put_context(token, body["event"]["text"])
+    else:
+        return {
+            "statusCode": 200,
+            "headers": {"Content-type": "application/json"},
+            "body": json.dumps({"status": "Success"}),
+        }
+
     slack_handler = SlackRequestHandler(app=app)
     return slack_handler.handle(event, context)
