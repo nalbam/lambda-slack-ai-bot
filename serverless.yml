@@ -5,14 +5,16 @@ provider:
   region: us-east-1
 functions:
   chatgpt:
-    handler: handler.handle_message
+    handler: handler.lambda_handler
     events:
       - http:
           method: post
           path: /slack/events
-    environment:
-      OPENAI_API_KEY: OPENAI_API_KEY
-      SLACK_APP_TOKEN: SLACK_APP_TOKEN
-      SLACK_BOT_TOKEN: SLACK_BOT_TOKEN
+    # environment:
+    #   OPENAI_API_KEY: OPENAI_API_KEY
+    #   SLACK_APP_TOKEN: SLACK_APP_TOKEN
+    #   SLACK_BOT_TOKEN: SLACK_BOT_TOKEN
+    #   SLACK_SIGNING_SECRET: SLACK_SIGNING_SECRET
 plugins:
   - serverless-python-requirements
+  - serverless-dotenv-plugin
