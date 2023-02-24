@@ -70,6 +70,10 @@ def handle_app_mentions(body: dict, say: Say):
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
     #     return
 
+    # Keep track of the latest message timestamp
+    result = say(text=":loading:", thread_ts=thread_ts)
+    latest_ts = result["ts"]
+
     # Get conversation history for this thread, if any
     prompt = get_context(thread_ts) + text + "\n"
 
@@ -90,30 +94,23 @@ def handle_app_mentions(body: dict, say: Say):
             stream=True,
         )
 
-        # Keep track of the latest message timestamp
-        latest_ts = None
-
         # Stream each message in the response to the user in the same thread
         cnt = 0
         for completions in stream:
             message = message + completions.choices[0].text
 
             # Send or update the message, depending on whether it's the first or subsequent messages
-            if latest_ts is None:
-                result = say(text=message, thread_ts=thread_ts)
-                latest_ts = result["ts"]
-            else:
-                if cnt % 16 == 0:
-                    print(thread_ts, message)
+            if cnt % 16 == 0:
+                print(thread_ts, message)
 
-                    app.client.chat_update(
-                        channel=event["channel"],
-                        text=message,
-                        ts=latest_ts,
-                    )
+                app.client.chat_update(
+                    channel=event["channel"],
+                    text=message,
+                    ts=latest_ts,
+                )
             cnt = cnt + 1
 
-        if latest_ts is not None:
+        if message != "":
             app.client.chat_update(
                 channel=event["channel"],
                 text=message,
@@ -134,7 +131,7 @@ def handle_app_mentions(body: dict, say: Say):
         message = completions.choices[0].text
 
         # Send the response to the user in the same thread
-        say(text=message, thread_ts=thread_ts)
+        say(channel=event["channel"], text=message, thread_ts=latest_ts)
 
     print(thread_ts, prompt, message)
 
