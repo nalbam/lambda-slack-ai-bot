@@ -71,7 +71,8 @@ def handle_app_mentions(body: dict, say: Say):
     #     return
 
     # Get conversation history for this thread, if any
-    prompt = get_context(thread_ts) + f"{text}\n"
+    prompt = get_context(thread_ts) + text + "\n"
+
     message = ""
 
     # Update the prompt with the latest message
