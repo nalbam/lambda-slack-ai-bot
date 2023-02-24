@@ -1,17 +1,16 @@
+import boto3
 import json
-import logging
 import openai
 import os
 
-# import openai_secret_manager
-
-from slack_bolt import App
+from slack_bolt import App, Say
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 # Set up OpenAI API credentials
-# assert "openai" in openai_secret_manager.get_services()
-# secrets = openai_secret_manager.get_secret("openai")
-openai.api_key = os.environ["OPENAI_API_KEY"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_ENGINE = os.environ["OPENAI_ENGINE"]
+
+openai.api_key = OPENAI_API_KEY
 
 # Set up Slack API credentials
 SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
@@ -19,82 +18,126 @@ SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
 # Initialize Slack app
-app = App(token=SLACK_BOT_TOKEN, signing_secret=SLACK_SIGNING_SECRET)
+app = App(
+    token=SLACK_BOT_TOKEN,
+    signing_secret=SLACK_SIGNING_SECRET,
+    process_before_response=True,
+)
 
-SlackRequestHandler.clear_all_log_handlers()
-logging.basicConfig(format="%(asctime)s %(message)s", level=logging.DEBUG)
+# Keep track of conversation history by thread
+DYNAMODB_TABLE_NAME = os.environ["DYNAMODB_TABLE_NAME"]
+
+dynamodb = boto3.client("dynamodb")
+
+
+def get_context(thread_ts):
+    response = dynamodb.get_item(
+        TableName=DYNAMODB_TABLE_NAME,
+        Key={"thread_ts": {"S": thread_ts}},
+        ConsistentRead=True,
+    )
+    item = response.get("Item")
+    if item is None:
+        return ""
+    else:
+        return item.get("prompt", {"S": ""}).get("S", "")
+
+
+def put_context(thread_ts, prompt):
+    dynamodb.put_item(
+        TableName=DYNAMODB_TABLE_NAME,
+        Item={
+            "thread_ts": {"S": thread_ts},
+            "prompt": {"S": prompt},
+        },
+    )
 
 
 # Handle the app_mention event
 @app.event("app_mention")
-def handle_app_mentions(body, say, logger):
-    print("handle_app_mention", body)
+def handle_app_mentions(body: dict, say: Say):
+    print("handle_app_mentions: {}".format(body))
 
     event = body["event"]
 
-    # Get the text of the incoming message
-    message_text = event["text"]
+    text = event["text"].split("<@")[1].split(">")[1].strip()
+    thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
 
-    # Send the message to OpenAI and get the response
-    response_stream = (
-        openai.Completion.create(
-            engine="davinci",
-            prompt=message_text,
-            max_tokens=60,
-            n=1,
-            stop=None,
-            temperature=0.5,
-        )
-        .get("choices")[0]
-        .get("text")
+    print("call_chatgpt [{}] [{}]".format(thread_ts, text))
+
+    # # Check if this is a message from the bot itself, or if it doesn't mention the bot
+    # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
+    #     return
+
+    # Get conversation history for this thread, if any
+    prompt = get_context(thread_ts) + f"{text}\n"
+    message = ""
+
+    # # Create a new completion
+    # completions = openai.Completion.create(
+    #     engine=OPENAI_ENGINE,
+    #     prompt=prompt,
+    #     max_tokens=1024,
+    #     n=1,
+    #     stop=None,
+    #     temperature=0.5,
+    # )
+
+    # # Get the first response from the OpenAI API
+    # message = completions.choices[0].text
+
+    # # Send the response to the user in the same thread
+    # say(text=message, thread_ts=thread_ts)
+
+    # Create a new completion and stream the response
+    stream = openai.Completion.create(
+        engine=OPENAI_ENGINE,
+        prompt=prompt,
+        max_tokens=1024,
+        n=1,
+        stop=None,
+        temperature=0.5,
+        stream=True,
     )
 
-    # Post the response back to the Slack channel
-    channel_id = event["channel"]
-    thread_ts = event["ts"]
-    response = {"text": response_stream, "thread_ts": thread_ts}
-    app.client.conversations_replies(channel=channel_id, **response)
+    # Keep track of the latest message timestamp
+    latest_ts = None
 
+    # Stream each message in the response to the user in the same thread
+    i = 0
+    for completions in stream:
+        message = message + completions.choices[0].text
 
-# Define the message handler function
-@app.event("message")
-def handle_message(body, say, logger):
-    print("handle_message", body)
+        # Send or update the message, depending on whether it's the first or subsequent messages
+        if latest_ts is None:
+            result = say(text=message, thread_ts=thread_ts)
+            latest_ts = result["ts"]
+        else:
+            if i % 20 == 0:
+                print(thread_ts, message)
 
-    event = body["event"]
+                app.client.chat_update(
+                    channel=event["channel"],
+                    text=message,
+                    ts=latest_ts,
+                )
+        i = i + 1
 
-    # If the incoming message was generated by a bot or Slack app, then ignore it
-    if "bot_id" in event or "app_id" in event:
-        return
-
-    # Get the text of the incoming message
-    message_text = event["text"]
-
-    # Send the message to OpenAI and get the response
-    response_stream = (
-        openai.Completion.create(
-            engine="davinci",
-            prompt=message_text,
-            max_tokens=60,
-            n=1,
-            stop=None,
-            temperature=0.5,
+    if latest_ts is not None:
+        app.client.chat_update(
+            channel=event["channel"],
+            text=message,
+            ts=latest_ts,
         )
-        .get("choices")[0]
-        .get("text")
-    )
 
-    # Post the response back to the Slack channel
-    channel_id = event["channel"]
-    thread_ts = event["ts"]
-    response = {"text": response_stream, "thread_ts": thread_ts}
-    app.client.conversations_replies(channel=channel_id, **response)
+    print(thread_ts, prompt, message)
+
+    # Update the prompt with the latest message
+    put_context(thread_ts, prompt + message + "\n")
 
 
 def lambda_handler(event, context):
     body = json.loads(event["body"])
-
-    print("lambda_handler", body)
 
     if "challenge" in body:
         # Respond to the Slack Event Subscription Challenge
@@ -104,21 +147,5 @@ def lambda_handler(event, context):
             "body": json.dumps({"challenge": body["challenge"]}),
         }
 
-    # # Initialize the Slack app
-    # app.start()
-
-    # # Handle the message event
-    # app.event("message")(handle_message)
-
-    # # Handle the app_mention event
-    # app.event("app_mention")(handle_app_mention)
-
     slack_handler = SlackRequestHandler(app=app)
     return slack_handler.handle(event, context)
-
-    # # Return a success message
-    # return {
-    #     "statusCode": 200,
-    #     "headers": {"Content-type": "application/json"},
-    #     "body": json.dumps({"message": "Success"}),
-    # }

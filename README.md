@@ -44,7 +44,7 @@ In order to deploy the example, you need to run the following command:
 $ sls deploy
 ```
 
-## Test
+## Slack Test
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
@@ -55,4 +55,18 @@ curl -X POST -H "Content-Type: application/json" \
     \"type\": \"url_verification\" \
 }" \
 https://tnmahcbgth.execute-api.us-east-1.amazonaws.com/dev/slack/events
+```
+
+## ChatGPT Test
+
+```bash
+curl https://api.openai.com/v1/completions \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+  -d '{
+  "model": "text-davinci-003",
+  "prompt": "Say this is a test",
+  "max_tokens": 7,
+  "temperature": 0
+}'
 ```

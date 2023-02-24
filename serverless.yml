@@ -1,9 +1,16 @@
 service: lambda-chatgpt-slack-bot
 provider:
   name: aws
-  runtime: python3.8
+  runtime: python3.9
   region: us-east-1
   stage: prod
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        - "arn:aws:dynamodb:us-east-1:968005369378:table/chatgpt-slack-history"
+
 functions:
   chatgpt:
     handler: handler.lambda_handler
@@ -11,11 +18,23 @@ functions:
       - http:
           method: post
           path: /slack/events
-    # environment:
-    #   OPENAI_API_KEY: OPENAI_API_KEY
-    #   SLACK_APP_TOKEN: SLACK_APP_TOKEN
-    #   SLACK_BOT_TOKEN: SLACK_BOT_TOKEN
-    #   SLACK_SIGNING_SECRET: SLACK_SIGNING_SECRET
+
+resources:
+  Resources:
+    DynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: chatgpt-slack-history # ${self:provider.environment.DYNAMODB_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: thread_ts
+            AttributeType: S
+        KeySchema:
+          - AttributeName: thread_ts
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
 plugins:
   - serverless-python-requirements
   - serverless-dotenv-plugin
