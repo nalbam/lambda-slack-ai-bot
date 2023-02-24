@@ -138,7 +138,7 @@ def handle_app_mentions(body: dict, say: Say):
     print(thread_ts, prompt, message)
 
     # Update the prompt with the latest message
-    put_context(thread_ts, message + "\n")
+    put_context(thread_ts, prompt + message + "\n")
 
 
 def lambda_handler(event, context):
