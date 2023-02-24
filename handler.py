@@ -73,67 +73,70 @@ def handle_app_mentions(body: dict, say: Say):
     prompt = get_context(thread_ts) + f"{text}\n"
     message = ""
 
-    # # Create a new completion
-    # completions = openai.Completion.create(
-    #     engine=OPENAI_ENGINE,
-    #     prompt=prompt,
-    #     max_tokens=1024,
-    #     n=1,
-    #     stop=None,
-    #     temperature=0.5,
-    # )
+    # Update the prompt with the latest message
+    put_context(thread_ts, prompt)
 
-    # # Get the first response from the OpenAI API
-    # message = completions.choices[0].text
-
-    # # Send the response to the user in the same thread
-    # say(text=message, thread_ts=thread_ts)
-
-    # Create a new completion and stream the response
-    stream = openai.Completion.create(
+    # Create a new completion
+    completions = openai.Completion.create(
         engine=OPENAI_ENGINE,
         prompt=prompt,
         max_tokens=1024,
         n=1,
         stop=None,
         temperature=0.5,
-        stream=True,
     )
 
-    # Keep track of the latest message timestamp
-    latest_ts = None
+    # Get the first response from the OpenAI API
+    message = completions.choices[0].text
 
-    # Stream each message in the response to the user in the same thread
-    i = 0
-    for completions in stream:
-        message = message + completions.choices[0].text
+    # Send the response to the user in the same thread
+    say(text=message, thread_ts=thread_ts)
 
-        # Send or update the message, depending on whether it's the first or subsequent messages
-        if latest_ts is None:
-            result = say(text=message, thread_ts=thread_ts)
-            latest_ts = result["ts"]
-        else:
-            if i % 20 == 0:
-                print(thread_ts, message)
+    # # Create a new completion and stream the response
+    # stream = openai.Completion.create(
+    #     engine=OPENAI_ENGINE,
+    #     prompt=prompt,
+    #     max_tokens=1024,
+    #     n=1,
+    #     stop=None,
+    #     temperature=0.5,
+    #     stream=True,
+    # )
 
-                app.client.chat_update(
-                    channel=event["channel"],
-                    text=message,
-                    ts=latest_ts,
-                )
-        i = i + 1
+    # # Keep track of the latest message timestamp
+    # latest_ts = None
 
-    if latest_ts is not None:
-        app.client.chat_update(
-            channel=event["channel"],
-            text=message,
-            ts=latest_ts,
-        )
+    # # Stream each message in the response to the user in the same thread
+    # i = 0
+    # for completions in stream:
+    #     message = message + completions.choices[0].text
+
+    #     # Send or update the message, depending on whether it's the first or subsequent messages
+    #     if latest_ts is None:
+    #         result = say(text=message, thread_ts=thread_ts)
+    #         latest_ts = result["ts"]
+    #     else:
+    #         if i % 20 == 0:
+    #             print(thread_ts, message)
+
+    #             app.client.chat_update(
+    #                 channel=event["channel"],
+    #                 text=message,
+    #                 ts=latest_ts,
+    #             )
+    #     i = i + 1
+
+    # if latest_ts is not None:
+    #     app.client.chat_update(
+    #         channel=event["channel"],
+    #         text=message,
+    #         ts=latest_ts,
+    #     )
 
     print(thread_ts, prompt, message)
 
     # Update the prompt with the latest message
-    put_context(thread_ts, prompt + message + "\n")
+    put_context(thread_ts, message + "\n")
 
 
 def lambda_handler(event, context):
