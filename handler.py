@@ -8,7 +8,8 @@ from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_ENGINE = os.environ["OPENAI_ENGINE"]
+OPENAI_ENGINE = os.environ.get("OPENAI_ENGINE", "text-davinci-003")
+OPENAI_STREAM = os.environ.get("OPENAI_STREAM", True)
 
 openai.api_key = OPENAI_API_KEY
 
@@ -25,7 +26,7 @@ app = App(
 )
 
 # Keep track of conversation history by thread
-DYNAMODB_TABLE_NAME = os.environ["DYNAMODB_TABLE_NAME"]
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-slack-history")
 
 dynamodb = boto3.client("dynamodb")
 
@@ -76,62 +77,63 @@ def handle_app_mentions(body: dict, say: Say):
     # Update the prompt with the latest message
     put_context(thread_ts, prompt)
 
-    # Create a new completion
-    completions = openai.Completion.create(
-        engine=OPENAI_ENGINE,
-        prompt=prompt,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
+    if OPENAI_STREAM:
+        # Create a new completion and stream the response
+        stream = openai.Completion.create(
+            engine=OPENAI_ENGINE,
+            prompt=prompt,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+            stream=True,
+        )
 
-    # Get the first response from the OpenAI API
-    message = completions.choices[0].text
+        # Keep track of the latest message timestamp
+        latest_ts = None
 
-    # Send the response to the user in the same thread
-    say(text=message, thread_ts=thread_ts)
+        # Stream each message in the response to the user in the same thread
+        cnt = 0
+        for completions in stream:
+            message = message + completions.choices[0].text
 
-    # # Create a new completion and stream the response
-    # stream = openai.Completion.create(
-    #     engine=OPENAI_ENGINE,
-    #     prompt=prompt,
-    #     max_tokens=1024,
-    #     n=1,
-    #     stop=None,
-    #     temperature=0.5,
-    #     stream=True,
-    # )
+            # Send or update the message, depending on whether it's the first or subsequent messages
+            if latest_ts is None:
+                result = say(text=message, thread_ts=thread_ts)
+                latest_ts = result["ts"]
+            else:
+                if cnt % 16 == 0:
+                    print(thread_ts, message)
 
-    # # Keep track of the latest message timestamp
-    # latest_ts = None
+                    app.client.chat_update(
+                        channel=event["channel"],
+                        text=message,
+                        ts=latest_ts,
+                    )
+            cnt = cnt + 1
 
-    # # Stream each message in the response to the user in the same thread
-    # i = 0
-    # for completions in stream:
-    #     message = message + completions.choices[0].text
+        if latest_ts is not None:
+            app.client.chat_update(
+                channel=event["channel"],
+                text=message,
+                ts=latest_ts,
+            )
+    else:
+        # Create a new completion
+        completions = openai.Completion.create(
+            engine=OPENAI_ENGINE,
+            prompt=prompt,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+        )
 
-    #     # Send or update the message, depending on whether it's the first or subsequent messages
-    #     if latest_ts is None:
-    #         result = say(text=message, thread_ts=thread_ts)
-    #         latest_ts = result["ts"]
-    #     else:
-    #         if i % 20 == 0:
-    #             print(thread_ts, message)
+        # Get the first response from the OpenAI API
+        message = completions.choices[0].text
 
-    #             app.client.chat_update(
-    #                 channel=event["channel"],
-    #                 text=message,
-    #                 ts=latest_ts,
-    #             )
-    #     i = i + 1
-
-    # if latest_ts is not None:
-    #     app.client.chat_update(
-    #         channel=event["channel"],
-    #         text=message,
-    #         ts=latest_ts,
-    #     )
+        # Send the response to the user in the same thread
+        say(text=message, thread_ts=thread_ts)
 
     print(thread_ts, prompt, message)
 
