@@ -100,7 +100,7 @@ def handle_app_mentions(body: dict, say: Say):
             message = message + completions.choices[0].text
 
             # Send or update the message, depending on whether it's the first or subsequent messages
-            if cnt % 16 == 0:
+            if cnt % 16 == 10:
                 print(thread_ts, message)
 
                 app.client.chat_update(
