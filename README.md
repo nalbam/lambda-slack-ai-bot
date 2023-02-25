@@ -3,13 +3,12 @@
 ## Install
 
 ```bash
-$ brew install python@3.8
+$ brew install python@3.9
 
 $ npm install -g serverless
 
 $ sls plugin install -n serverless-python-requirements
 $ sls plugin install -n serverless-dotenv-plugin
-
 
 $ pip3 install --upgrade -r requirements.txt
 ```
@@ -41,6 +40,8 @@ message.im
 In order to deploy the example, you need to run the following command:
 
 ```bash
+$ cp .env.example .env
+
 $ sls deploy
 ```
 
@@ -54,7 +55,7 @@ curl -X POST -H "Content-Type: application/json" \
     \"challenge\": \"3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P\", \
     \"type\": \"url_verification\" \
 }" \
-https://tnmahcbgth.execute-api.us-east-1.amazonaws.com/dev/slack/events
+https://xxxx.execute-api.us-east-1.amazonaws.com/dev/slack/events
 ```
 
 ## ChatGPT Test

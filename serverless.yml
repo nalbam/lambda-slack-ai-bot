@@ -10,7 +10,7 @@ provider:
       Action:
         - dynamodb:*
       Resource:
-        - "arn:aws:dynamodb:us-east-1:968005369378:table/chatgpt-slack-history"
+        - "arn:aws:dynamodb:us-east-1:0123456789:table/chatgpt-slack-history"
 
 functions:
   chatgpt:

@@ -152,6 +152,7 @@ def lambda_handler(event, context):
 
     print("lambda_handler: {}".format(body))
 
+    # Duplicate execution prevention
     token = body["event"]["client_msg_id"]
     prompt = get_context(token)
     if prompt == "":
