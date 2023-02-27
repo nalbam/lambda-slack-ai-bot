@@ -11,7 +11,7 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
 OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
-OPENAI_CONVERSATION = os.environ.get("OPENAI_CONVERSATION", "")
+OPENAI_CURSOR = os.environ.get("OPENAI_CURSOR", ":robot_face:")
 
 openai.api_key = OPENAI_API_KEY
 
@@ -76,7 +76,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
     print(thread_ts, prompt)
 
     # Keep track of the latest message timestamp
-    result = say(text=":loading:", thread_ts=thread_ts)
+    result = say(text=OPENAI_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
     # Get conversation history for this thread, if any
@@ -120,7 +120,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
 
         # Send or update the message, depending on whether it's the first or subsequent messages
         if counter % 16 == 10:
-            chat_update(channel, message + " :loading:", latest_ts)
+            chat_update(channel, message + " " + OPENAI_CURSOR, latest_ts)
 
             # Update the prompt with the latest message
             put_context(thread_ts, conversation + prompt + "\n" + message)
