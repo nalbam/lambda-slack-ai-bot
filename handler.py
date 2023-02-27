@@ -8,7 +8,10 @@ from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_ENGINE = os.environ.get("OPENAI_ENGINE", "text-davinci-003")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
+OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
+OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
+OPENAI_CONVERSATION = os.environ.get("OPENAI_CONVERSATION", "")
 
 openai.api_key = OPENAI_API_KEY
 
@@ -30,6 +33,7 @@ DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-slack-histo
 dynamodb = boto3.client("dynamodb")
 
 
+# Get the conversation history for a thread
 def get_context(thread_ts):
     response = dynamodb.get_item(
         TableName=DYNAMODB_TABLE_NAME,
@@ -38,19 +42,96 @@ def get_context(thread_ts):
     )
     item = response.get("Item")
     if item is None:
-        return ""
+        conversation = ""
     else:
-        return item.get("prompt", {"S": ""}).get("S", "")
+        conversation = item.get("conversation", {"S": ""}).get("S", "")
+    print("get_context {}: {}".format(thread_ts, conversation))
+    return conversation
 
 
-def put_context(thread_ts, prompt):
+# Update the conversation history for a thread
+def put_context(thread_ts, conversation):
+    print("put_context {}: {}".format(thread_ts, conversation))
     dynamodb.put_item(
         TableName=DYNAMODB_TABLE_NAME,
         Item={
             "thread_ts": {"S": thread_ts},
-            "prompt": {"S": prompt},
+            "conversation": {"S": conversation},
         },
     )
+
+
+# Update the message in Slack
+def chat_update(channel, message, latest_ts):
+    print("chat_update: {}".format(message))
+    app.client.chat_update(
+        channel=channel,
+        text=message,
+        ts=latest_ts,
+    )
+
+
+# Handle the openai conversation
+def conversation(thread_ts, prompt, channel, say: Say):
+    print(thread_ts, prompt)
+
+    # Keep track of the latest message timestamp
+    result = say(text=":loading:", thread_ts=thread_ts)
+    latest_ts = result["ts"]
+
+    # Get conversation history for this thread, if any
+    conversation = get_context(thread_ts)
+
+    if conversation == "":
+        response = openai.Completion.create(
+            # engine="davinci",
+            model=OPENAI_MODEL,
+            prompt=prompt,
+            max_tokens=OPENAI_MAX_TOKENS,
+            n=1,
+            stop=None,
+            temperature=OPENAI_TEMPERATURE,
+            stream=True,
+        )
+        prompt = "\nUser: " + prompt
+        message = "\nAnswer: "
+    else:
+        prompt = "\nUser: " + prompt
+        message = ""
+        response = openai.Completion.create(
+            # engine="davinci",
+            model=OPENAI_MODEL,
+            prompt=conversation + prompt,
+            max_tokens=OPENAI_MAX_TOKENS,
+            n=1,
+            stop=None,
+            temperature=OPENAI_TEMPERATURE,
+            stream=True,
+            presence_penalty=0.6,
+            frequency_penalty=0.6,
+            # presence_penalty_type="more_than",
+            # context=conversation,
+        )
+
+    # Stream each message in the response to the user in the same thread
+    counter = 0
+    for completions in response:
+        message = message + completions.choices[0].text
+
+        # Send or update the message, depending on whether it's the first or subsequent messages
+        if counter % 16 == 10:
+            chat_update(channel, message + " :loading:", latest_ts)
+
+            # Update the prompt with the latest message
+            put_context(thread_ts, conversation + prompt + "\n" + message)
+
+        counter = counter + 1
+
+    if message != "":
+        chat_update(channel, message, latest_ts)
+
+        # Update the prompt with the latest message
+        put_context(thread_ts, conversation + prompt + "\n" + message)
 
 
 # Handle the app_mention event
@@ -60,65 +141,14 @@ def handle_app_mentions(body: dict, say: Say):
 
     event = body["event"]
 
-    text = event["text"].split("<@")[1].split(">")[1].strip()
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
-
-    print("call_chatgpt [{}] [{}]".format(thread_ts, text))
+    prompt = event["text"].split("<@")[1].split(">")[1].strip()
 
     # # Check if this is a message from the bot itself, or if it doesn't mention the bot
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
     #     return
 
-    # Keep track of the latest message timestamp
-    result = say(text=":loading:", thread_ts=thread_ts)
-    latest_ts = result["ts"]
-
-    # Get conversation history for this thread, if any
-    prompt = get_context(thread_ts) + text + "\n"
-
-    message = ""
-
-    # Update the prompt with the latest message
-    put_context(thread_ts, prompt)
-
-    # Create a new completion and stream the response
-    stream = openai.Completion.create(
-        engine=OPENAI_ENGINE,
-        prompt=prompt,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-        stream=True,
-    )
-
-    # Stream each message in the response to the user in the same thread
-    cnt = 0
-    for completions in stream:
-        message = message + completions.choices[0].text
-
-        # Send or update the message, depending on whether it's the first or subsequent messages
-        if cnt % 16 == 10:
-            print(thread_ts, message)
-
-            app.client.chat_update(
-                channel=event["channel"],
-                text=message,
-                ts=latest_ts,
-            )
-        cnt = cnt + 1
-
-    if message != "":
-        app.client.chat_update(
-            channel=event["channel"],
-            text=message,
-            ts=latest_ts,
-        )
-
-    print(thread_ts, prompt, message)
-
-    # Update the prompt with the latest message
-    put_context(thread_ts, prompt + message + "\n")
+    conversation(thread_ts, prompt, event["channel"], say)
 
 
 def lambda_handler(event, context):
@@ -146,5 +176,6 @@ def lambda_handler(event, context):
             "body": json.dumps({"status": "Success"}),
         }
 
+    # Handle the event
     slack_handler = SlackRequestHandler(app=app)
     return slack_handler.handle(event, context)
