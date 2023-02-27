@@ -28,7 +28,7 @@ app = App(
 )
 
 # Keep track of conversation history by thread
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-slack-history")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-history")
 
 dynamodb = boto3.client("dynamodb")
 

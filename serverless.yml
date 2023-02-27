@@ -1,19 +1,19 @@
-service: lambda-chatgpt-slack-bot
+service: lambda-openai-slack-bot
 provider:
   name: aws
   region: us-east-1
   runtime: python3.9
-  stage: prod
-  timeout: 30
+  # stage: prod
+  timeout: 120
   iamRoleStatements:
     - Effect: Allow
       Action:
         - dynamodb:*
       Resource:
-        - "arn:aws:dynamodb:us-east-1:0123456789:table/chatgpt-slack-history"
+        - "arn:aws:dynamodb:us-east-1:968005369378:table/openai-slack-bot-history"
 
 functions:
-  chatgpt:
+  openai:
     handler: handler.lambda_handler
     events:
       - http:
@@ -25,7 +25,7 @@ resources:
     DynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: chatgpt-slack-history # ${self:provider.environment.DYNAMODB_TABLE_NAME}
+        TableName: openai-slack-bot-history # ${self:provider.environment.DYNAMODB_TABLE_NAME}
         AttributeDefinitions:
           - AttributeName: thread_ts
             AttributeType: S

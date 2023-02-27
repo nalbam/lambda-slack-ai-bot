@@ -1,4 +1,4 @@
-# lambda-chatgpt-slack-bot
+# lambda-openai-slack-bot
 
 ## Install
 
@@ -58,7 +58,7 @@ curl -X POST -H "Content-Type: application/json" \
 https://xxxx.execute-api.us-east-1.amazonaws.com/dev/slack/events
 ```
 
-## ChatGPT Test
+## OpenAi API Test
 
 ```bash
 curl https://api.openai.com/v1/completions \
