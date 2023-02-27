@@ -93,7 +93,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
-        prompt = "\nUser: " + prompt
+        prompt = "User: " + prompt
         message = "\nAnswer: "
     else:
         prompt = "\nUser: " + prompt
