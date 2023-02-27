@@ -109,8 +109,6 @@ def conversation(thread_ts, prompt, channel, say: Say):
             stream=True,
             presence_penalty=0.6,
             frequency_penalty=0.6,
-            # presence_penalty_type="more_than",
-            # context=conversation,
         )
 
     # Stream each message in the response to the user in the same thread
