@@ -96,7 +96,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
         prompt = "User: " + prompt
         message = "\nAnswer: "
     else:
-        prompt = "\nUser: " + prompt
+        prompt = "\n\nUser: " + prompt
         message = ""
         response = openai.Completion.create(
             # engine="davinci",
