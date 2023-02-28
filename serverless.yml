@@ -10,7 +10,7 @@ provider:
       Action:
         - dynamodb:*
       Resource:
-        - "arn:aws:dynamodb:us-east-1:968005369378:table/openai-slack-bot-history"
+        - "arn:aws:dynamodb:us-east-1:968005369378:table/openai-slack-bot-context"
 
 functions:
   openai:
@@ -25,12 +25,12 @@ resources:
     DynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: openai-slack-bot-history # ${self:provider.environment.DYNAMODB_TABLE_NAME}
+        TableName: openai-slack-bot-context # ${self:provider.environment.DYNAMODB_TABLE_NAME}
         AttributeDefinitions:
-          - AttributeName: thread_ts
+          - AttributeName: id
             AttributeType: S
         KeySchema:
-          - AttributeName: thread_ts
+          - AttributeName: id
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 5

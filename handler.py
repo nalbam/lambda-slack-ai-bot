@@ -28,36 +28,23 @@ app = App(
 )
 
 # Keep track of conversation history by thread
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-history")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-context")
 
-dynamodb = boto3.client("dynamodb")
-
-
-# Get the conversation history for a thread
-def get_context(thread_ts):
-    response = dynamodb.get_item(
-        TableName=DYNAMODB_TABLE_NAME,
-        Key={"thread_ts": {"S": thread_ts}},
-        ConsistentRead=True,
-    )
-    item = response.get("Item")
-    if item is None:
-        conversation = ""
-    else:
-        conversation = item.get("conversation", {"S": ""}).get("S", "")
-    print("get_context {}: {}".format(thread_ts, conversation))
-    return conversation
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 
-# Update the conversation history for a thread
-def put_context(thread_ts, conversation):
-    print("put_context {}: {}".format(thread_ts, conversation))
-    dynamodb.put_item(
-        TableName=DYNAMODB_TABLE_NAME,
+def get_context(id):
+    item = table.get_item(Key={"id": id}).get("Item")
+    return (item["conversation"]) if item else ("")
+
+
+def put_context(id, conversation=""):
+    table.put_item(
         Item={
-            "thread_ts": {"S": thread_ts},
-            "conversation": {"S": conversation},
-        },
+            "id": id,
+            "conversation": conversation,
+        }
     )
 
 
@@ -94,7 +81,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
             stream=True,
         )
         prompt = "User: " + prompt
-        message = "\nAnswer: "
+        message = "\nBot: "
     else:
         prompt = "\n\nUser: " + prompt
         message = ""
