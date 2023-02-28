@@ -23,16 +23,12 @@ Set scopes to Bot Token Scopes in OAuth & Permission:
 app_mentions:read
 channels:join
 chat:write
-im:history
-im:read
-im:writ
 ```
 
 Set scopes in Event Subscriptions - Subscribe to bot events
 
 ```
 app_mention
-message.im
 ```
 
 ## Deployment
