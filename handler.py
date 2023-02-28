@@ -34,11 +34,13 @@ dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 
+# Get the context from DynamoDB
 def get_context(id):
     item = table.get_item(Key={"id": id}).get("Item")
     return (item["conversation"]) if item else ("")
 
 
+# Put the context in DynamoDB
 def put_context(id, conversation=""):
     table.put_item(
         Item={
@@ -136,6 +138,7 @@ def handle_app_mentions(body: dict, say: Say):
     conversation(thread_ts, prompt, event["channel"], say)
 
 
+# Handle the message event
 def lambda_handler(event, context):
     body = json.loads(event["body"])
 
