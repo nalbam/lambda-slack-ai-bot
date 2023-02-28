@@ -13,7 +13,7 @@ provider:
         - "arn:aws:dynamodb:us-east-1:968005369378:table/openai-slack-bot-context"
 
 functions:
-  openai:
+  mention:
     handler: handler.lambda_handler
     events:
       - http:
