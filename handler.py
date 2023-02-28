@@ -104,7 +104,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
         message = message + completions.choices[0].text
 
         # Send or update the message, depending on whether it's the first or subsequent messages
-        if counter % 16 == 10:
+        if counter % 16 == 1:
             chat_update(channel, message + " " + OPENAI_CURSOR, latest_ts)
 
             # Update the prompt with the latest message
