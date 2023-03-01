@@ -66,7 +66,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
     print(thread_ts, prompt)
 
     # Keep track of the latest message timestamp
-    result = say(text=OPENAI_CURSOR, thread_ts=thread_ts)
+    result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
     # Get conversation history for this thread, if any
@@ -108,7 +108,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
 
         # Send or update the message, depending on whether it's the first or subsequent messages
         if counter % 16 == 1:
-            chat_update(channel, message + " " + OPENAI_CURSOR, latest_ts)
+            chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
 
             # Update the prompt with the latest message
             put_context(thread_ts, conversation + prompt + "\n" + message)
