@@ -31,13 +31,32 @@ Set scopes in Event Subscriptions - Subscribe to bot events
 app_mention
 ```
 
+## Credentials
+
+```bash
+$ cp .env.example .env
+```
+
+### Slack Bot
+
+```bash
+SLACK_BOT_TOKEN="xoxb-xxxx"
+SLACK_SIGNING_SECRET="xxxx"
+```
+
+### ApenAi API
+
+* <https://platform.openai.com/account/api-keys>
+
+```bash
+OPENAI_API_KEY="xxxx"
+```
+
 ## Deployment
 
 In order to deploy the example, you need to run the following command:
 
 ```bash
-$ cp .env.example .env
-
 $ sls deploy
 ```
 
