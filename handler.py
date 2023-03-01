@@ -1,4 +1,5 @@
 import boto3
+import deepl
 import json
 import openai
 import os
@@ -31,7 +32,9 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
 OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
-openai.api_key = OPENAI_API_KEY
+# Set up DeepL API credentials
+DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
+DEEPL_TARGET_LANG = os.environ.get("DEEPL_TARGET_LANG", "KR")
 
 
 # Get the context from DynamoDB
@@ -60,9 +63,24 @@ def chat_update(channel, message, latest_ts):
     )
 
 
+# Handle the translate test
+def translate(message, target_lang=DEEPL_TARGET_LANG, source_lang=None):
+    print("translate: {}".format(message))
+
+    translator = deepl.Translator(DEEPL_API_KEY)
+
+    result = translator.translate_text(message, target_lang=target_lang, source_lang=source_lang)
+
+    print("translate: {}".format(result))
+
+    return result
+
+
 # Handle the openai conversation
 def conversation(thread_ts, prompt, channel, say: Say):
     print(thread_ts, prompt)
+
+    openai.api_key = OPENAI_API_KEY
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
