@@ -30,7 +30,6 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
 OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
-OPENAI_CURSOR = os.environ.get("OPENAI_CURSOR", ":robot_face:")
 
 openai.api_key = OPENAI_API_KEY
 

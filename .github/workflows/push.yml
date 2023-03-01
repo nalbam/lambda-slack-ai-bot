@@ -1,0 +1,48 @@
+name: Deploy to AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Python dependencies
+        run: npx serverless plugin install --name serverless-python-requirements
+
+      - name: Install dotenv plugin
+        run: npx serverless plugin install --name serverless-dotenv-plugin
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up environment variables
+        run: |
+          echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
+          echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
+          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
+          echo "OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS}" >> .env
+          echo "OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE}" >> .env
+          echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
+
+      - name: Deploy to AWS
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: npx serverless deploy
