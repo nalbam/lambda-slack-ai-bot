@@ -6,6 +6,14 @@ on:
       - main
       - master
 
+env:
+  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+  SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_MAX_TOKENS: ${{ secrets.OPENAI_MAX_TOKENS }}
+  OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
+  BOT_CURSOR: ${{ secrets.BOT_CURSOR }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
