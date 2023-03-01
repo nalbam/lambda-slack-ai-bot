@@ -6,17 +6,15 @@ import os
 from slack_bolt import App, Say
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
-# Set up OpenAI API credentials
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
-OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
-OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
-OPENAI_CURSOR = os.environ.get("OPENAI_CURSOR", ":robot_face:")
+BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
-openai.api_key = OPENAI_API_KEY
+# Keep track of conversation history by thread
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-context")
+
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 # Set up Slack API credentials
-SLACK_APP_TOKEN = os.environ["SLACK_APP_TOKEN"]
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
@@ -27,11 +25,14 @@ app = App(
     process_before_response=True,
 )
 
-# Keep track of conversation history by thread
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-context")
+# Set up OpenAI API credentials
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "text-davinci-003")
+OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", 1024))
+OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
+OPENAI_CURSOR = os.environ.get("OPENAI_CURSOR", ":robot_face:")
 
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+openai.api_key = OPENAI_API_KEY
 
 
 # Get the context from DynamoDB
