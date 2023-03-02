@@ -30,7 +30,7 @@ app = App(
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ["OPENAI_MODEL"]
-OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0))
+OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.1))
 
 # # Set up DeepL API credentials
 # DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
@@ -99,7 +99,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
     response = openai.ChatCompletion.create(
         model=OPENAI_MODEL,
         messages=messages,
-        temperature=OPENAI_TEMPERATURE,
+        # temperature=OPENAI_TEMPERATURE,
         stream=True,
     )
 
