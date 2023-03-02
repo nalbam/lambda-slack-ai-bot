@@ -7,12 +7,11 @@ on:
       - master
 
 env:
+  BOT_CURSOR: ":loading:"
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_MODEL: "gpt-3.5-turbo"
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
   SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  OPENAI_MAX_TOKENS: ${{ secrets.OPENAI_MAX_TOKENS }}
-  OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
-  BOT_CURSOR: ${{ secrets.BOT_CURSOR }}
 
 jobs:
   deploy:
@@ -41,12 +40,11 @@ jobs:
 
       - name: Set up environment variables
         run: |
+          echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
+          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
+          echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
           echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
           echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
-          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
-          echo "OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS}" >> .env
-          echo "OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE}" >> .env
-          echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
 
       - name: Deploy to AWS
         env:
