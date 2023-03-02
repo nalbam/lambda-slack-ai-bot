@@ -39,9 +39,9 @@ OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0))
 
 
 # Get the context from DynamoDB
-def get_context(id):
+def get_context(id, default=""):
     item = table.get_item(Key={"id": id}).get("Item")
-    return (item["conversation"]) if item else ("")
+    return (item["conversation"]) if item else (default)
 
 
 # Put the context in DynamoDB
@@ -88,16 +88,18 @@ def conversation(thread_ts, prompt, channel, say: Say):
     latest_ts = result["ts"]
 
     # Get conversation history for this thread, if any
-    conversation = get_context(thread_ts)
+    messages = json.loads(get_context(thread_ts, "[]"))
+
+    messages.append(
+        {
+            "role": "user",
+            "content": prompt,
+        }
+    )
 
     response = openai.ChatCompletion.create(
         model=OPENAI_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
+        messages=messages,
         temperature=OPENAI_TEMPERATURE,
         stream=True,
     )
@@ -106,19 +108,28 @@ def conversation(thread_ts, prompt, channel, say: Say):
     counter = 0
     message = ""
     for completions in response:
+        if counter == 0:
+            print(completions)
+
         if "content" in completions.choices[0].delta:
             message = message + completions.choices[0].delta.get("content")
 
         # Send or update the message, depending on whether it's the first or subsequent messages
         if counter % 16 == 1:
             chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
-            put_context(thread_ts, conversation + prompt + "\n" + message)
 
         counter = counter + 1
 
+    chat_update(channel, message, latest_ts)
+
     if message != "":
-        chat_update(channel, message, latest_ts)
-        put_context(thread_ts, conversation + prompt + "\n" + message)
+        messages.append(
+            {
+                "role": "assistant",
+                "content": message,
+            }
+        )
+        put_context(thread_ts, json.dumps(messages))
 
 
 # Handle the app_mention event
