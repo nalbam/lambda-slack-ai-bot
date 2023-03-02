@@ -96,39 +96,51 @@ def conversation(thread_ts, prompt, channel, say: Say):
         }
     )
 
-    response = openai.ChatCompletion.create(
-        model=OPENAI_MODEL,
-        messages=messages,
-        # temperature=OPENAI_TEMPERATURE,
-        stream=True,
-    )
-
-    # Stream each message in the response to the user in the same thread
-    counter = 0
-    message = ""
-    for completions in response:
-        if counter == 0:
-            print(completions)
-
-        if "content" in completions.choices[0].delta:
-            message = message + completions.choices[0].delta.get("content")
-
-        # Send or update the message, depending on whether it's the first or subsequent messages
-        if counter % 16 == 1:
-            chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
-
-        counter = counter + 1
-
-    chat_update(channel, message, latest_ts)
-
-    if message != "":
-        messages.append(
-            {
-                "role": "assistant",
-                "content": message,
-            }
+    try:
+        response = openai.ChatCompletion.create(
+            model=OPENAI_MODEL,
+            messages=messages,
+            # temperature=OPENAI_TEMPERATURE,
+            stream=True,
         )
-        put_context(thread_ts, json.dumps(messages))
+
+        # Stream each message in the response to the user in the same thread
+        counter = 0
+        message = ""
+        for completions in response:
+            if counter == 0:
+                print(completions)
+
+            if "content" in completions.choices[0].delta:
+                message = message + completions.choices[0].delta.get("content")
+
+            # Send or update the message, depending on whether it's the first or subsequent messages
+            if counter % 16 == 1:
+                chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
+
+            counter = counter + 1
+
+        chat_update(channel, message, latest_ts)
+
+        if message != "":
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": message,
+                }
+            )
+            put_context(thread_ts, json.dumps(messages))
+
+    except Exception as e:
+        chat_update(channel, message, latest_ts)
+
+        message = "Error handling message: {}".format(e)
+        say(text=message, thread_ts=thread_ts)
+
+        print(thread_ts, message)
+
+        message = "Sorry, I could not process your request.\nhttps://status.openai.com"
+        say(text=message, thread_ts=thread_ts)
 
 
 # Handle the app_mention event
