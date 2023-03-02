@@ -1,4 +1,5 @@
 import boto3
+
 # import deepl
 import json
 import openai
@@ -90,7 +91,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
     conversation = get_context(thread_ts)
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=OPENAI_MODEL,
         messages=[
             {
                 "role": "user",
@@ -98,57 +99,25 @@ def conversation(thread_ts, prompt, channel, say: Say):
             }
         ],
         temperature=OPENAI_TEMPERATURE,
+        stream=True,
     )
 
-    message = response.choices[0].message.content
+    # Stream each message in the response to the user in the same thread
+    counter = 0
+    message = ""
+    for completions in response:
+        if "content" in completions.choices[0].delta:
+            message = message + completions.choices[0].delta.get("content")
 
-    # if conversation == "":
-    #     response = openai.ChatCompletion.create(
-    #         # engine="davinci",
-    #         model=OPENAI_MODEL,
-    #         prompt=prompt,
-    #         max_tokens=OPENAI_MAX_TOKENS,
-    #         n=1,
-    #         stop=None,
-    #         temperature=OPENAI_TEMPERATURE,
-    #         stream=True,
-    #     )
-    #     prompt = "User: " + prompt
-    #     message = "\nBot: "
-    # else:
-    #     prompt = "\n\nUser: " + prompt
-    #     message = ""
-    #     response = openai.ChatCompletion.create(
-    #         # engine="davinci",
-    #         model=OPENAI_MODEL,
-    #         prompt=conversation + prompt,
-    #         max_tokens=OPENAI_MAX_TOKENS,
-    #         n=1,
-    #         stop=None,
-    #         temperature=OPENAI_TEMPERATURE,
-    #         stream=True,
-    #         presence_penalty=0.6,
-    #         frequency_penalty=0.6,
-    #     )
+        # Send or update the message, depending on whether it's the first or subsequent messages
+        if counter % 16 == 1:
+            chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
+            put_context(thread_ts, conversation + prompt + "\n" + message)
 
-    # # Stream each message in the response to the user in the same thread
-    # counter = 0
-    # for completions in response:
-    #     message = message + completions.choices[0].text
-
-    #     # Send or update the message, depending on whether it's the first or subsequent messages
-    #     if counter % 16 == 1:
-    #         chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
-
-    #         # Update the prompt with the latest message
-    #         put_context(thread_ts, conversation + prompt + "\n" + message)
-
-    #     counter = counter + 1
+        counter = counter + 1
 
     if message != "":
         chat_update(channel, message, latest_ts)
-
-        # Update the prompt with the latest message
         put_context(thread_ts, conversation + prompt + "\n" + message)
 
 
