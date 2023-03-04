@@ -115,7 +115,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
                 message = message + completions.choices[0].delta.get("content")
 
             # Send or update the message, depending on whether it's the first or subsequent messages
-            if counter % 32 == 1:
+            if counter % 64 == 1:
                 chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
 
             counter = counter + 1
