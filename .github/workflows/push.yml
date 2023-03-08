@@ -10,6 +10,7 @@ env:
   BOT_CURSOR: ":loading:"
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_MODEL: "gpt-3.5-turbo"
+  OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
   SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
 
@@ -43,6 +44,7 @@ jobs:
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
+          echo "OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE}" >> .env
           echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
           echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
 
