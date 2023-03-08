@@ -29,8 +29,9 @@ app = App(
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 6))
 OPENAI_MODEL = os.environ["OPENAI_MODEL"]
+
+OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 6))
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
