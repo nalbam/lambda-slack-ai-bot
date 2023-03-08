@@ -1,9 +1,9 @@
 import boto3
-
-# import deepl
 import json
 import openai
 import os
+
+# import deepl
 
 from slack_bolt import App, Say
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
@@ -29,7 +29,9 @@ app = App(
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 6))
 OPENAI_MODEL = os.environ["OPENAI_MODEL"]
+OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
 # # Set up DeepL API credentials
@@ -88,6 +90,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
 
     # Get conversation history for this thread, if any
     messages = json.loads(get_context(thread_ts, "[]"))
+    messages = messages[-OPENAI_HISTORY:]
 
     messages.append(
         {
@@ -97,9 +100,19 @@ def conversation(thread_ts, prompt, channel, say: Say):
     )
 
     try:
+        if OPENAI_SYSTEM != "":
+            chat_message = [
+                {
+                    "role": "system",
+                    "content": OPENAI_SYSTEM,
+                }
+            ] + messages
+        else:
+            chat_message = messages
+
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
-            messages=messages,
+            messages=chat_message,
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
