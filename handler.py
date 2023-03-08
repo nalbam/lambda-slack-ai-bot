@@ -100,7 +100,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages=messages,
-            # temperature=OPENAI_TEMPERATURE,
+            temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
 
