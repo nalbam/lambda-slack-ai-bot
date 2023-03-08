@@ -92,6 +92,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
     messages = json.loads(get_context(thread_ts, "[]"))
     messages = messages[-OPENAI_HISTORY:]
 
+    # Add the user message to the conversation history
     messages.append(
         {
             "role": "user",
@@ -99,17 +100,18 @@ def conversation(thread_ts, prompt, channel, say: Say):
         }
     )
 
-    try:
-        if OPENAI_SYSTEM != "":
-            chat_message = [
-                {
-                    "role": "system",
-                    "content": OPENAI_SYSTEM,
-                }
-            ] + messages
-        else:
-            chat_message = messages
+    # Add the system message to the conversation history
+    if OPENAI_SYSTEM != "":
+        chat_message = [
+            {
+                "role": "system",
+                "content": OPENAI_SYSTEM,
+            }
+        ] + messages
+    else:
+        chat_message = messages
 
+    try:
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages=chat_message,
@@ -117,9 +119,10 @@ def conversation(thread_ts, prompt, channel, say: Say):
             stream=True,
         )
 
+        message = ""
+
         # Stream each message in the response to the user in the same thread
         counter = 0
-        message = ""
         for completions in response:
             if counter == 0:
                 print(completions)
@@ -128,11 +131,12 @@ def conversation(thread_ts, prompt, channel, say: Say):
                 message = message + completions.choices[0].delta.get("content")
 
             # Send or update the message, depending on whether it's the first or subsequent messages
-            if counter % 64 == 1:
+            if counter % 32 == 1:
                 chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
 
             counter = counter + 1
 
+        # Send the final message
         chat_update(channel, message, latest_ts)
 
         if message != "":
