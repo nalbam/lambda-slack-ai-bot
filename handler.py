@@ -30,7 +30,7 @@ app = App(
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ["OPENAI_MODEL"]
-OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.1))
+OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
 # # Set up DeepL API credentials
 # DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
