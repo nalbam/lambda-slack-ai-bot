@@ -82,7 +82,7 @@ curl https://api.openai.com/v1/completions \
   -d '{
   "model": "text-davinci-003",
   "prompt": "Say this is a test",
-  "max_tokens": 7,
+  "max_tokens": 16,
   "temperature": 0
 }'
 ```
