@@ -10,7 +10,7 @@ provider:
       Action:
         - dynamodb:*
       Resource:
-        - "arn:aws:dynamodb:us-east-1:968005369378:table/openai-slack-bot-context"
+        - "arn:aws:dynamodb:us-east-1:*:table/openai-slack-bot-context"
 
 functions:
   mention:
