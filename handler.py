@@ -2,6 +2,7 @@ import boto3
 import json
 import openai
 import os
+import time
 
 # import deepl
 
@@ -48,10 +49,14 @@ def get_context(id, default=""):
 
 # Put the context in DynamoDB
 def put_context(id, conversation=""):
+    current_time = int(time.time())
+    expire_at = current_time + (86400 * 10)
+
     table.put_item(
         Item={
             "id": id,
             "conversation": conversation,
+            "expire_at": expire_at,
         }
     )
 

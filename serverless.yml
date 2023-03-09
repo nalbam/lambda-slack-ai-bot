@@ -35,6 +35,9 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+        TimeToLiveSpecification:
+          AttributeName: expire_at
+          Enabled: true
 
 plugins:
   - serverless-python-requirements
