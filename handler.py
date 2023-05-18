@@ -117,6 +117,8 @@ def conversation(thread_ts, prompt, channel, say: Say):
     else:
         chat_message = messages
 
+    message = ""
+
     try:
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
@@ -124,8 +126,6 @@ def conversation(thread_ts, prompt, channel, say: Say):
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
-
-        message = ""
 
         # Stream each message in the response to the user in the same thread
         counter = 0
