@@ -100,7 +100,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
 
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
-        response = app.client.conversations_replies(channel=channel, ts=thread_ts, token=SLACK_BOT_TOKEN)
+        response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
         if not response.get("ok"):
             print("Failed to retrieve thread messages")
