@@ -30,7 +30,7 @@ app = App(
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.environ["OPENAI_MODEL"]
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
 
 OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 6))
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
@@ -50,7 +50,7 @@ def get_context(id, default=""):
 # Put the context in DynamoDB
 def put_context(id, conversation=""):
     current_time = int(time.time())
-    expire_at = current_time + (86400 * 10)
+    expire_at = current_time + (86400 * 10)  # +10 days
 
     table.put_item(
         Item={
@@ -94,9 +94,20 @@ def conversation(thread_ts, prompt, channel, say: Say):
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
-    # Get conversation history for this thread, if any
-    messages = json.loads(get_context(thread_ts, "[]"))
-    messages = messages[-OPENAI_HISTORY:]
+    # # Get conversation history for this thread, if any
+    # messages = json.loads(get_context(thread_ts, "[]"))
+    # messages = messages[-OPENAI_HISTORY:]
+
+    if thread_ts != None:
+        # Get thread messages using conversations.replies API method
+        response = app.client.conversations_replies(channel=channel, ts=thread_ts, token=SLACK_BOT_TOKEN)
+
+        if not response.get("ok"):
+            print("Failed to retrieve thread messages")
+
+        messages = response.get("messages", [])
+    else:
+        messages = []
 
     # Add the user message to the conversation history
     messages.append(
@@ -173,6 +184,7 @@ def handle_app_mentions(body: dict, say: Say):
 
     event = body["event"]
 
+    channel = event["channel"]
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
     prompt = event["text"].split("<@")[1].split(">")[1].strip()
 
@@ -180,7 +192,7 @@ def handle_app_mentions(body: dict, say: Say):
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
     #     return
 
-    conversation(thread_ts, prompt, event["channel"], say)
+    conversation(thread_ts, prompt, channel, say)
 
 
 # Handle the message event
