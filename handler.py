@@ -32,7 +32,7 @@ app = App(
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
 
-OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 6))
+OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 10))
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
@@ -98,18 +98,32 @@ def conversation(thread_ts, prompt, channel, say: Say):
     # messages = json.loads(get_context(thread_ts, "[]"))
     # messages = messages[-OPENAI_HISTORY:]
 
+    messages = []
+
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
         response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
-        print(response)
+        print("conversations_replies", response)
 
         if not response.get("ok"):
             print("Failed to retrieve thread messages")
 
-        messages = response.get("messages", [])
-    else:
-        messages = []
+        for message in response.get("messages", [])[-OPENAI_HISTORY:]:
+            role = "user"
+            if message.get("bot_id", "") != "":
+                role = "assistant"
+
+            content = message.get("text", "")
+            if message.get("user", "") != "":
+                content = "<@{}> {}".format(message.get("user"), content)
+
+            messages.append(
+                {
+                    "role": role,
+                    "content": content,
+                }
+            )
 
     # Add the user message to the conversation history
     messages.append(
@@ -144,7 +158,7 @@ def conversation(thread_ts, prompt, channel, say: Say):
         counter = 0
         for completions in response:
             if counter == 0:
-                print(completions)
+                print("completions", completions)
 
             if "content" in completions.choices[0].delta:
                 message = message + completions.choices[0].delta.get("content")
@@ -181,8 +195,8 @@ def conversation(thread_ts, prompt, channel, say: Say):
 
 # Handle the app_mention event
 @app.event("app_mention")
-def handle_app_mentions(body: dict, say: Say):
-    print("handle_app_mentions: {}".format(body))
+def handle_mention(body: dict, say: Say):
+    print("handle_mention: {}".format(body))
 
     event = body["event"]
 
@@ -195,6 +209,23 @@ def handle_app_mentions(body: dict, say: Say):
     #     return
 
     conversation(thread_ts, prompt, channel, say)
+
+
+# Handle the DM (direct message) event
+@app.event("message")
+def handle_message(body: dict, say: Say):
+    print("handle_message: {}".format(body))
+
+    event = body["event"]
+
+    channel = event["channel"]
+    prompt = event["text"].strip()
+
+    if "bot_id" in event:  # Ignore messages from the bot itself
+        return
+
+    # Use thread_ts=None for regular messages, and user ID for DMs
+    conversation(None, prompt, channel, say)
 
 
 # Handle the message event
