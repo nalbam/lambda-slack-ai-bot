@@ -173,14 +173,14 @@ def conversation(thread_ts, prompt, channel, client_msg_id, say: Say):
         # Send the final message
         chat_update(channel, message, latest_ts)
 
-        if message != "":
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": message,
-                }
-            )
-            put_context(thread_ts, json.dumps(messages))
+        # if message != "":
+        #     messages.append(
+        #         {
+        #             "role": "assistant",
+        #             "content": message,
+        #         }
+        #     )
+        #     put_context(thread_ts, json.dumps(messages))
 
     except Exception as e:
         chat_update(channel, message, latest_ts)
