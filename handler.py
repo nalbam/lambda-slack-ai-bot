@@ -30,7 +30,7 @@ app = App(
 
 # Set up OpenAI API credentials
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
 
 OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 10))
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
@@ -204,7 +204,7 @@ def handle_mention(body: dict, say: Say):
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
-    prompt = event["text"].split("<@")[1].split(">")[1]
+    prompt = event["text"].split("<@")[1].split(">")[1].strip()
 
     # # Check if this is a message from the bot itself, or if it doesn't mention the bot
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
@@ -222,7 +222,7 @@ def handle_message(body: dict, say: Say):
 
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
-    prompt = event["text"]
+    prompt = event["text"].strip()
 
     if "bot_id" in event:  # Ignore messages from the bot itself
         return
