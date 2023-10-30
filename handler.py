@@ -49,9 +49,7 @@ def get_context(id, default=""):
 
 # Put the context in DynamoDB
 def put_context(id, conversation=""):
-    current_time = int(time.time())
-    expire_at = current_time + 86400  # 24 hours
-
+    expire_at = int(time.time()) + 86400  # 24 hours
     table.put_item(
         Item={
             "id": id,
