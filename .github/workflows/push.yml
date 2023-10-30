@@ -7,9 +7,9 @@ on:
       - master
 
 env:
-  BOT_CURSOR: ":loading:"
+  BOT_CURSOR: ${{ secrets.BOT_CURSOR }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  OPENAI_MODEL: "gpt-3.5-turbo"
+  OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
   OPENAI_SYSTEM: ${{ secrets.OPENAI_SYSTEM }}
   OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
