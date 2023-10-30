@@ -85,7 +85,7 @@ def chat_update(channel, message, latest_ts):
 
 
 # Handle the openai conversation
-def conversation(thread_ts, prompt, channel, say: Say):
+def conversation(thread_ts, prompt, channel, client_msg_id, say: Say):
     print(thread_ts, prompt)
 
     openai.api_key = OPENAI_API_KEY
@@ -118,6 +118,9 @@ def conversation(thread_ts, prompt, channel, say: Say):
             print("Failed to retrieve thread messages")
 
         for message in response.get("messages", [])[-OPENAI_HISTORY:]:
+            if message.get("client_msg_id", "") == client_msg_id:
+                break
+
             role = "user"
             if message.get("bot_id", "") != "":
                 role = "assistant"
@@ -199,14 +202,15 @@ def handle_mention(body: dict, say: Say):
     event = body["event"]
 
     channel = event["channel"]
+    client_msg_id = event["client_msg_id"]
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
-    prompt = event["text"].split("<@")[1].split(">")[1].strip()
+    prompt = event["text"].split("<@")[1].split(">")[1]
 
     # # Check if this is a message from the bot itself, or if it doesn't mention the bot
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
     #     return
 
-    conversation(thread_ts, prompt, channel, say)
+    conversation(thread_ts, prompt, channel, client_msg_id, say)
 
 
 # Handle the DM (direct message) event
@@ -217,13 +221,14 @@ def handle_message(body: dict, say: Say):
     event = body["event"]
 
     channel = event["channel"]
-    prompt = event["text"].strip()
+    client_msg_id = event["client_msg_id"]
+    prompt = event["text"]
 
     if "bot_id" in event:  # Ignore messages from the bot itself
         return
 
     # Use thread_ts=None for regular messages, and user ID for DMs
-    conversation(None, prompt, channel, say)
+    conversation(None, prompt, channel, client_msg_id, say)
 
 
 # Handle the message event
