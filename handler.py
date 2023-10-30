@@ -94,11 +94,19 @@ def conversation(thread_ts, prompt, channel, say: Say):
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
+    messages = []
+
+    if OPENAI_SYSTEM != "":
+        messages.append(
+            {
+                "role": "system",
+                "content": OPENAI_SYSTEM,
+            }
+        )
+
     # # Get conversation history for this thread, if any
     # messages = json.loads(get_context(thread_ts, "[]"))
     # messages = messages[-OPENAI_HISTORY:]
-
-    messages = []
 
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
@@ -133,31 +141,19 @@ def conversation(thread_ts, prompt, channel, say: Say):
         }
     )
 
-    # Add the system message to the conversation history
-    if OPENAI_SYSTEM != "":
-        chat_message = [
-            {
-                "role": "system",
-                "content": OPENAI_SYSTEM,
-            }
-        ] + messages
-    else:
-        chat_message = messages
-
-    message = ""
-
     try:
-        print("chat_message", chat_message)
+        print("messages", messages)
 
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
-            messages=chat_message,
+            messages=messages,
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
 
         # Stream each message in the response to the user in the same thread
         counter = 0
+        message = ""
         for completions in response:
             if counter == 0:
                 print("completions", completions)
