@@ -85,7 +85,7 @@ def chat_update(channel, message, latest_ts):
 
 
 # Handle the openai conversation
-def conversation(thread_ts, prompt, channel, client_msg_id, say: Say):
+def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
     print(thread_ts, prompt)
 
     openai.api_key = OPENAI_API_KEY
@@ -210,7 +210,7 @@ def handle_mention(body: dict, say: Say):
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
     #     return
 
-    conversation(thread_ts, prompt, channel, client_msg_id, say)
+    conversation(say, thread_ts, prompt, channel, client_msg_id)
 
 
 # Handle the DM (direct message) event
@@ -228,7 +228,7 @@ def handle_message(body: dict, say: Say):
         return
 
     # Use thread_ts=None for regular messages, and user ID for DMs
-    conversation(None, prompt, channel, client_msg_id, say)
+    conversation(say, None, prompt, channel, client_msg_id)
 
 
 # Handle the message event
