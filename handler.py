@@ -147,6 +147,8 @@ def conversation(thread_ts, prompt, channel, say: Say):
     message = ""
 
     try:
+        print("chat_message", chat_message)
+
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages=chat_message,
