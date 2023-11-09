@@ -1,6 +1,7 @@
 import boto3
 import json
 import os
+import re
 import sys
 import time
 
@@ -42,6 +43,8 @@ MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
 openai = OpenAI(
     api_key=OPENAI_API_KEY,
 )
+
+bot_id = app.client.api_call("auth.test")["user_id"]
 
 # # Set up DeepL API credentials
 # DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
@@ -199,10 +202,10 @@ def handle_mention(body: dict, say: Say):
 
     event = body["event"]
 
+    thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
+    prompt = re.sub(f"<@{bot_id}>", "", event["text"]).strip()
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
-    thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
-    prompt = event["text"].split("<@")[1].split(">")[1].strip()
 
     # # Check if this is a message from the bot itself, or if it doesn't mention the bot
     # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
@@ -218,9 +221,9 @@ def handle_message(body: dict, say: Say):
 
     event = body["event"]
 
+    prompt = event["text"].strip()
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
-    prompt = event["text"].strip()
 
     if "bot_id" in event:  # Ignore messages from the bot itself
         return
