@@ -68,7 +68,7 @@ def put_context(id, conversation=""):
 
 # Update the message in Slack
 def chat_update(channel, message, latest_ts):
-    print("chat_update: {}".format(message))
+    # print("chat_update: {}".format(message))
     app.client.chat_update(
         channel=channel,
         text=message,
@@ -135,7 +135,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                 }
             )
 
-            print("messages size", sys.getsizeof(messages))
+            # print("messages size", sys.getsizeof(messages))
 
             if sys.getsizeof(messages) > MESSAGE_MAX:
                 break
@@ -178,6 +178,8 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
 
         # Send the final message
         chat_update(channel, message, latest_ts)
+
+        print(thread_ts, message)
 
     except Exception as e:
         chat_update(channel, message, latest_ts)
