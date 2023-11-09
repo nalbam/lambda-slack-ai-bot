@@ -96,19 +96,24 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
 
     messages = []
 
+    # Add the user message to the conversation history
+    messages.append(
+        {
+            "role": "user",
+            "content": prompt,
+        }
+    )
+
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
         response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
-        # print("conversations_replies", response)
+        print("conversations_replies", response)
 
         if not response.get("ok"):
             print("Failed to retrieve thread messages")
 
-        # reverse
-        replies = response.get("messages", []).reverse()
-
-        for message in replies:
+        for message in response.get("messages", [])[::-1]:
             if message.get("client_msg_id", "") == client_msg_id:
                 continue
 
@@ -140,23 +145,12 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
             }
         )
 
-    # reverse
-    messages.reverse()
-
-    # Add the user message to the conversation history
-    messages.append(
-        {
-            "role": "user",
-            "content": prompt,
-        }
-    )
-
     try:
         print("messages", messages)
 
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
-            messages=messages,
+            messages=messages[::-1],  # reversed
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
@@ -179,15 +173,6 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
 
         # Send the final message
         chat_update(channel, message, latest_ts)
-
-        # if message != "":
-        #     messages.append(
-        #         {
-        #             "role": "assistant",
-        #             "content": message,
-        #         }
-        #     )
-        #     put_context(thread_ts, json.dumps(messages))
 
     except Exception as e:
         chat_update(channel, message, latest_ts)
