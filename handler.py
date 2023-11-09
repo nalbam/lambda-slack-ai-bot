@@ -127,6 +127,8 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                 }
             )
 
+            print("messages getsizeof", sys.getsizeof(messages))
+
             if sys.getsizeof(messages) > MESSAGE_MAX:
                 break
 
