@@ -149,11 +149,13 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
         )
 
     try:
+        messages = messages[::-1]  # reversed
+
         print("messages", messages)
 
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model=OPENAI_MODEL,
-            messages=messages[::-1],  # reversed
+            messages=messages,
             temperature=OPENAI_TEMPERATURE,
             stream=True,
         )
@@ -161,12 +163,11 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
         # Stream each message in the response to the user in the same thread
         counter = 0
         message = ""
-        for completions in response:
+        for part in stream:
             if counter == 0:
-                print("completions", completions)
+                print("stream part", part)
 
-            if "content" in completions.choices[0].delta:
-                message = message + completions.choices[0].delta.get("content")
+            message = message + (part.choices[0].delta.content or "")
 
             # Send or update the message, depending on whether it's the first or subsequent messages
             if counter % 32 == 1:
