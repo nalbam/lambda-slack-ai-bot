@@ -202,14 +202,13 @@ def handle_mention(body: dict, say: Say):
 
     event = body["event"]
 
+    if "bot_id" in event:  # Ignore messages from the bot itself
+        return
+
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
     prompt = re.sub(f"<@{bot_id}>", "", event["text"]).strip()
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
-
-    # # Check if this is a message from the bot itself, or if it doesn't mention the bot
-    # if "bot_id" in event or f"<@{app.client.users_info(user=SLACK_BOT_TOKEN)['user']['id']}>" not in text:
-    #     return
 
     conversation(say, thread_ts, prompt, channel, client_msg_id)
 
@@ -221,12 +220,12 @@ def handle_message(body: dict, say: Say):
 
     event = body["event"]
 
+    if "bot_id" in event:  # Ignore messages from the bot itself
+        return
+
     prompt = event["text"].strip()
     channel = event["channel"]
     client_msg_id = event["client_msg_id"]
-
-    if "bot_id" in event:  # Ignore messages from the bot itself
-        return
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     conversation(say, None, prompt, channel, client_msg_id)
