@@ -125,8 +125,6 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                 role = "assistant"
 
             content = message.get("text", "")
-            if message.get("user", "") != "":
-                content = "<@{}> {}".format(message.get("user"), content)
 
             messages.append(
                 {
