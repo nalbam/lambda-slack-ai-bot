@@ -2,6 +2,7 @@ import boto3
 import json
 import openai
 import os
+import sys
 import time
 
 # import deepl
@@ -32,9 +33,10 @@ app = App(
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
 
-OPENAI_HISTORY = int(os.environ.get("OPENAI_HISTORY", 10))
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
+
+MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 5000))
 
 # # Set up DeepL API credentials
 # DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
@@ -94,30 +96,21 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
 
     messages = []
 
-    if OPENAI_SYSTEM != "":
-        messages.append(
-            {
-                "role": "system",
-                "content": OPENAI_SYSTEM,
-            }
-        )
-
-    # # Get conversation history for this thread, if any
-    # messages = json.loads(get_context(thread_ts, "[]"))
-    # messages = messages[-OPENAI_HISTORY:]
-
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
         response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
-        print("conversations_replies", response)
+        # print("conversations_replies", response)
 
         if not response.get("ok"):
             print("Failed to retrieve thread messages")
 
-        for message in response.get("messages", [])[-OPENAI_HISTORY:]:
+        # reverse
+        replies = response.get("messages", []).reverse()
+
+        for message in replies:
             if message.get("client_msg_id", "") == client_msg_id:
-                break
+                continue
 
             role = "user"
             if message.get("bot_id", "") != "":
@@ -133,6 +126,20 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                     "content": content,
                 }
             )
+
+            if sys.getsizeof(messages) > MESSAGE_MAX:
+                break
+
+    if OPENAI_SYSTEM != "":
+        messages.append(
+            {
+                "role": "system",
+                "content": OPENAI_SYSTEM,
+            }
+        )
+
+    # reverse
+    messages.reverse()
 
     # Add the user message to the conversation history
     messages.append(
