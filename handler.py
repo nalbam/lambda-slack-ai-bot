@@ -37,7 +37,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
 OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
-MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 5000))
+MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
 
 client = OpenAI(
     api_key=OPENAI_API_KEY,
@@ -135,7 +135,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                 }
             )
 
-            print("messages getsizeof", sys.getsizeof(messages))
+            print("messages size", sys.getsizeof(messages))
 
             if sys.getsizeof(messages) > MESSAGE_MAX:
                 break
@@ -152,6 +152,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
         messages = messages[::-1]  # reversed
 
         print("messages", messages)
+        print("messages size", sys.getsizeof(messages))
 
         stream = client.chat.completions.create(
             model=OPENAI_MODEL,
