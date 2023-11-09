@@ -1,11 +1,12 @@
 import boto3
 import json
-import openai
 import os
 import sys
 import time
 
 # import deepl
+
+from openai import OpenAI
 
 from slack_bolt import App, Say
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
@@ -37,6 +38,10 @@ OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
 MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 5000))
+
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+)
 
 # # Set up DeepL API credentials
 # DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
@@ -87,8 +92,6 @@ def chat_update(channel, message, latest_ts):
 # Handle the openai conversation
 def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
     print(thread_ts, prompt)
-
-    openai.api_key = OPENAI_API_KEY
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
@@ -148,7 +151,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
     try:
         print("messages", messages)
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages[::-1],  # reversed
             temperature=OPENAI_TEMPERATURE,
