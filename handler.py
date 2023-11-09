@@ -39,7 +39,7 @@ OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
 
 MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
 
-client = OpenAI(
+openai = OpenAI(
     api_key=OPENAI_API_KEY,
 )
 
@@ -154,7 +154,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
         print("messages", messages)
         print("messages size", sys.getsizeof(messages))
 
-        stream = client.chat.completions.create(
+        stream = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
             temperature=OPENAI_TEMPERATURE,
