@@ -136,6 +136,7 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
             # print("messages size", sys.getsizeof(messages))
 
             if sys.getsizeof(messages) > MESSAGE_MAX:
+                messages.pop(0)  # remove the oldest message
                 break
 
     if OPENAI_SYSTEM != "":
