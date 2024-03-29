@@ -1,11 +1,12 @@
 import boto3
+import datetime
 import json
 import os
 import re
 import sys
 import time
 
-# import deepl
+from retry import retry
 
 from openai import OpenAI
 
@@ -14,15 +15,23 @@ from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
-# Keep track of conversation history by thread
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "openai-slack-bot-context")
-
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+# Set up ChatGPT API credentials
+OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
 
 # Set up Slack API credentials
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
+
+# Set up System messages
+SYSTEM_MESSAGE_KR = os.environ.get("SYSTEM_MESSAGE_KR", "")
+SYSTEM_MESSAGE_EN = os.environ.get("SYSTEM_MESSAGE_EN", "")
+SYSTEM_MESSAGE_JP = os.environ.get("SYSTEM_MESSAGE_JP", "")
+
+MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
+
+TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
 # Initialize Slack app
 app = App(
@@ -31,70 +40,99 @@ app = App(
     process_before_response=True,
 )
 
-# Set up OpenAI API credentials
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo")
+bot_id = app.client.api_call("auth.test")["user_id"]
 
-OPENAI_SYSTEM = os.environ.get("OPENAI_SYSTEM", "")
-OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", 0.5))
-
-MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
-
+# Initialize OpenAI
 openai = OpenAI(
+    organization=OPENAI_ORG_ID,
     api_key=OPENAI_API_KEY,
 )
 
-bot_id = app.client.api_call("auth.test")["user_id"]
+# Keep track of conversation history by thread and user
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-slack-thread")
 
-# # Set up DeepL API credentials
-# DEEPL_API_KEY = os.environ["DEEPL_API_KEY"]
-# DEEPL_TARGET_LANG = os.environ.get("DEEPL_TARGET_LANG", "KR")
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+
+# OpenAI system message
+system_message = {
+    "role": "system",
+    "content": "{}\n{}\n{}\n".format(
+        SYSTEM_MESSAGE_KR, SYSTEM_MESSAGE_EN, SYSTEM_MESSAGE_JP
+    ),
+}
 
 
 # Get the context from DynamoDB
-def get_context(id, default=""):
-    item = table.get_item(Key={"id": id}).get("Item")
+def get_context(thread_ts, user, default=""):
+    if thread_ts is None:
+        item = table.get_item(Key={"id": user}).get("Item")
+    else:
+        item = table.get_item(Key={"id": thread_ts}).get("Item")
     return (item["conversation"]) if item else (default)
 
 
 # Put the context in DynamoDB
-def put_context(id, conversation=""):
-    expire_at = int(time.time()) + 86400  # 24 hours
-    table.put_item(
-        Item={
-            "id": id,
-            "conversation": conversation,
-            "expire_at": expire_at,
-        }
-    )
+def put_context(thread_ts, user, conversation=""):
+    expire_at = int(time.time()) + 3600  # 1h
+    expire_dt = datetime.datetime.fromtimestamp(expire_at).isoformat()
+    if thread_ts is None:
+        table.put_item(
+            Item={
+                "id": user,
+                "conversation": conversation,
+                "expire_dt": expire_dt,
+                "expire_at": expire_at,
+            }
+        )
+    else:
+        table.put_item(
+            Item={
+                "id": thread_ts,
+                "conversation": conversation,
+                "expire_dt": expire_dt,
+                "expire_at": expire_at,
+            }
+        )
 
 
 # Update the message in Slack
 def chat_update(channel, message, latest_ts):
     # print("chat_update: {}".format(message))
-    app.client.chat_update(
-        channel=channel,
-        text=message,
-        ts=latest_ts,
+    app.client.chat_update(channel=channel, text=message, ts=latest_ts)
+
+
+@retry(tries=10, delay=1, backoff=2, max_delay=4)
+def reply(messages, channel, latest_ts, user):
+    stream = openai.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=messages,
+        temperature=TEMPERATURE,
+        stream=True,
+        user=user,
     )
 
+    counter = 0
+    message = ""
+    for part in stream:
+        reply = part.choices[0].delta.content or ""
 
-# # Handle the translate test
-# def translate(message, target_lang=DEEPL_TARGET_LANG, source_lang=None):
-#     print("translate: {}".format(message))
+        if reply:
+            message += reply
 
-#     translator = deepl.Translator(DEEPL_API_KEY)
+        if counter % 16 == 1:
+            chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
 
-#     result = translator.translate_text(message, target_lang=target_lang, source_lang=source_lang)
+        counter = counter + 1
 
-#     print("translate: {}".format(result))
+    chat_update(channel, message, latest_ts)
 
-#     return result
+    return message
 
 
-# Handle the openai conversation
-def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
-    print(thread_ts, prompt)
+# Handle the chatgpt conversation
+def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
+    print("conversation: {}".format(prompt))
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
@@ -102,22 +140,21 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
 
     messages = []
 
-    # Add the user message to the conversation history
     messages.append(
         {
             "role": "user",
             "content": prompt,
-        }
+        },
     )
 
     if thread_ts != None:
         # Get thread messages using conversations.replies API method
         response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
-        print("conversations_replies", response)
+        print("conversations_replies: {}".format(response))
 
         if not response.get("ok"):
-            print("Failed to retrieve thread messages")
+            print("Failed to retrieve thread messages.")
 
         for message in response.get("messages", [])[::-1]:
             if message.get("client_msg_id", "") == client_msg_id:
@@ -136,63 +173,34 @@ def conversation(say: Say, thread_ts, prompt, channel, client_msg_id):
                 }
             )
 
-            # print("messages size", sys.getsizeof(messages))
+            # print("conversation: messages size: {}".format(sys.getsizeof(messages)))
 
             if sys.getsizeof(messages) > MESSAGE_MAX:
                 messages.pop(0)  # remove the oldest message
                 break
 
-    if OPENAI_SYSTEM != "":
-        messages.append(
-            {
-                "role": "system",
-                "content": OPENAI_SYSTEM,
-            }
-        )
+    messages.append(system_message)
 
     try:
         messages = messages[::-1]  # reversed
 
-        print("messages", messages)
-        print("messages size", sys.getsizeof(messages))
+        # Send the prompt to ChatGPT
+        message = reply(messages, channel, latest_ts, user)
 
-        stream = openai.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-            temperature=OPENAI_TEMPERATURE,
-            stream=True,
-        )
+        print("conversation: {}".format(message))
 
-        # Stream each message in the response to the user in the same thread
-        counter = 0
-        message = ""
-        for part in stream:
-            if counter == 0:
-                print("stream part", part)
-
-            message = message + (part.choices[0].delta.content or "")
-
-            # Send or update the message, depending on whether it's the first or subsequent messages
-            if counter % 32 == 1:
-                chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
-
-            counter = counter + 1
-
-        # Send the final message
-        chat_update(channel, message, latest_ts)
-
-        print(thread_ts, message)
+        # if message != "":
+        #     messages.append({"role": "assistant", "content": message})
+        #     put_context(thread_ts, user, json.dumps(messages))
 
     except Exception as e:
+        print("conversation: Error handling message: {}".format(e))
+        print("conversation: OpenAI Model: {}".format(OPENAI_MODEL))
+
+        message = f"Sorry, I could not process your request.\nhttps://status.openai.com\nError message below:\n`{e}`"
+
+        # say(text=message, thread_ts=thread_ts)
         chat_update(channel, message, latest_ts)
-
-        message = "Error handling message: {}".format(e)
-        say(text=message, thread_ts=thread_ts)
-
-        print(thread_ts, message)
-
-        message = "Sorry, I could not process your request.\nhttps://status.openai.com"
-        say(text=message, thread_ts=thread_ts)
 
 
 # Handle the app_mention event
@@ -208,9 +216,10 @@ def handle_mention(body: dict, say: Say):
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
     prompt = re.sub(f"<@{bot_id}>", "", event["text"]).strip()
     channel = event["channel"]
+    user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    conversation(say, thread_ts, prompt, channel, client_msg_id)
+    conversation(say, thread_ts, prompt, channel, user, client_msg_id)
 
 
 # Handle the DM (direct message) event
@@ -225,13 +234,29 @@ def handle_message(body: dict, say: Say):
 
     prompt = event["text"].strip()
     channel = event["channel"]
+    user = event["user"]
     client_msg_id = event["client_msg_id"]
 
     # Use thread_ts=None for regular messages, and user ID for DMs
-    conversation(say, None, prompt, channel, client_msg_id)
+    conversation(say, None, prompt, channel, user, client_msg_id)
 
 
-# Handle the message event
+# Handle the summary event
+@app.event("summarize")
+def handle_summary(body: dict, say: Say):
+    print("handle_summary: {}".format(body))
+
+    event = body["event"]
+
+    thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
+    prompt = "이 대화를 요약해줘."
+    channel = event["channel"]
+    user = event["user"]
+    client_msg_id = event["client_msg_id"]
+
+    conversation(say, thread_ts, prompt, channel, user, client_msg_id)
+
+
 def lambda_handler(event, context):
     body = json.loads(event["body"])
 
@@ -246,16 +271,26 @@ def lambda_handler(event, context):
     print("lambda_handler: {}".format(body))
 
     # Duplicate execution prevention
-    token = body["event"]["client_msg_id"]
-    prompt = get_context(token)
-    if prompt == "":
-        put_context(token, body["event"]["text"])
-    else:
+    if "event" not in body or "client_msg_id" not in body["event"]:
         return {
             "statusCode": 200,
             "headers": {"Content-type": "application/json"},
             "body": json.dumps({"status": "Success"}),
         }
+
+    # Get the context from DynamoDB
+    token = body["event"]["client_msg_id"]
+    prompt = get_context(token, body["event"]["user"])
+
+    if prompt != "":
+        return {
+            "statusCode": 200,
+            "headers": {"Content-type": "application/json"},
+            "body": json.dumps({"status": "Success"}),
+        }
+
+    # Put the context in DynamoDB
+    put_context(token, body["event"]["user"], body["event"]["text"])
 
     # Handle the event
     slack_handler = SlackRequestHandler(app=app)

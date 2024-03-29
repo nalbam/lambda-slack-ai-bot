@@ -4,7 +4,8 @@ provider:
   region: us-east-1
   runtime: python3.9
   # stage: prod
-  timeout: 120
+  # memorySize: 5120
+  timeout: 300
   environment:
     DYNAMODB_TABLE_NAME: openai-slack-bot-context
   iamRoleStatements:

@@ -1,4 +1,5 @@
 boto3
-# deepl
 openai
+retry
 slack-bolt
+slack-sdk
