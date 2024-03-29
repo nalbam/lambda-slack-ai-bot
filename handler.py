@@ -25,13 +25,11 @@ SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
 # Set up System messages
-SYSTEM_MESSAGE_KR = os.environ.get("SYSTEM_MESSAGE_KR", "")
-SYSTEM_MESSAGE_EN = os.environ.get("SYSTEM_MESSAGE_EN", "")
-SYSTEM_MESSAGE_JP = os.environ.get("SYSTEM_MESSAGE_JP", "")
-
-MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
+SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
+
+MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
 
 # Initialize Slack app
 app = App(
@@ -57,9 +55,7 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 # OpenAI system message
 system_message = {
     "role": "system",
-    "content": "{}\n{}\n{}\n".format(
-        SYSTEM_MESSAGE_KR, SYSTEM_MESSAGE_EN, SYSTEM_MESSAGE_JP
-    ),
+    "content": SYSTEM_MESSAGE,
 }
 
 

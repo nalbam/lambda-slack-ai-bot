@@ -10,8 +10,8 @@ env:
   BOT_CURSOR: ${{ secrets.BOT_CURSOR }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-  OPENAI_SYSTEM: ${{ secrets.OPENAI_SYSTEM }}
-  OPENAI_TEMPERATURE: ${{ secrets.OPENAI_TEMPERATURE }}
+  SYSTEM_MESSAGE: ${{ secrets.SYSTEM_MESSAGE }}
+  TEMPERATURE: ${{ secrets.TEMPERATURE }}
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
   SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
 
@@ -45,8 +45,8 @@ jobs:
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
-          echo "OPENAI_SYSTEM=${OPENAI_SYSTEM}" >> .env
-          echo "OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE}" >> .env
+          echo "SYSTEM_MESSAGE=${SYSTEM_MESSAGE}" >> .env
+          echo "TEMPERATURE=${TEMPERATURE}" >> .env
           echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
           echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
 
