@@ -235,11 +235,11 @@ def content_from_message(prompt, event):
 
                 content.append(
                     {
-                        "type": "image_url",
-                        "image_url": {
-                            # "url": file.get("thumb_480") or file.get("url_private"),
-                            "url": f"data:{mimetype};base64,{base64_image}"
-                        },
+                        "type": "image",
+                        # "image_url": {
+                        # "url": file.get("thumb_480") or file.get("url_private"),
+                        "image": f"data:{mimetype};base64,{base64_image}",
+                        # },
                     }
                 )
 
