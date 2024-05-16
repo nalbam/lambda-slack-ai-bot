@@ -167,7 +167,7 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
             # content = message.get("text", "")
 
             content = []
-            content.append({"type": "type", "text": message.get("text", "")})
+            content.append({"type": "text", "text": message.get("text", "")})
 
             if "files" in message:
                 files = message.get("files", [])
@@ -212,8 +212,9 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
     except Exception as e:
         print("conversation: Error handling message: {}".format(e))
         print("conversation: OpenAI Model: {}".format(OPENAI_MODEL))
+        print("conversation: {}".format(json.dumps(messages)))
 
-        message = f"Sorry, I could not process your request.\nhttps://status.openai.com\nError message below:\n`{e}`"
+        message = f"Error: ```{e}```"
 
         # say(text=message, thread_ts=thread_ts)
         chat_update(channel, message, latest_ts)
