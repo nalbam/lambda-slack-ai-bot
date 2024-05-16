@@ -131,8 +131,8 @@ def reply(messages, channel, latest_ts, user):
 
 
 # Handle the chatgpt conversation
-def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
-    print("conversation: {}".format(prompt))
+def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
+    print("conversation: {}".format(json.dumps(content)))
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
@@ -143,7 +143,7 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
     messages.append(
         {
             "role": "user",
-            "content": prompt,
+            "content": content,
         },
     )
 
@@ -164,28 +164,10 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            # content = message.get("text", "")
-
-            content = []
-            content.append({"type": "text", "text": message.get("text", "")})
-
-            if "files" in message:
-                files = message.get("files", [])
-                for file in files:
-                    if file["mimetype"].startswith("image"):
-                        content.append(
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": file.get("url_private"),
-                                },
-                            }
-                        )
-
             messages.append(
                 {
                     "role": role,
-                    "content": content,
+                    "content": message.get("text", ""),
                 }
             )
 
@@ -237,7 +219,23 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    conversation(say, thread_ts, prompt, channel, user, client_msg_id)
+    content = []
+    content.append({"type": "text", "text": prompt})
+
+    if "files" in event:
+        files = event.get("files", [])
+        for file in files:
+            if file["mimetype"].startswith("image"):
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": file.get("url_private"),
+                        },
+                    }
+                )
+
+    conversation(say, thread_ts, content, channel, user, client_msg_id)
 
 
 # Handle the DM (direct message) event
@@ -255,8 +253,24 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
+    content = []
+    content.append({"type": "text", "text": prompt})
+
+    if "files" in event:
+        files = event.get("files", [])
+        for file in files:
+            if file["mimetype"].startswith("image"):
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": file.get("url_private"),
+                        },
+                    }
+                )
+
     # Use thread_ts=None for regular messages, and user ID for DMs
-    conversation(say, None, prompt, channel, user, client_msg_id)
+    conversation(say, None, content, channel, user, client_msg_id)
 
 
 # Handle the summary event
@@ -272,7 +286,23 @@ def handle_summary(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    conversation(say, thread_ts, prompt, channel, user, client_msg_id)
+    content = []
+    content.append({"type": "text", "text": prompt})
+
+    if "files" in event:
+        files = event.get("files", [])
+        for file in files:
+            if file["mimetype"].startswith("image"):
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": file.get("url_private"),
+                        },
+                    }
+                )
+
+    conversation(say, thread_ts, content, channel, user, client_msg_id)
 
 
 def lambda_handler(event, context):
