@@ -210,7 +210,9 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
 
 def image_url_to_base64(image_url):
-    response = requests.get(image_url, headers={'Authorization': 'Bearer %s' % SLACK_BOT_TOKEN})
+    response = requests.get(
+        image_url, headers={"Authorization": "Bearer %s" % SLACK_BOT_TOKEN}
+    )
 
     encoded_image = None
 
@@ -231,7 +233,7 @@ def content_from_message(prompt, event):
         for file in files:
             mimetype = file["mimetype"]
             if mimetype.startswith("image"):
-                image_url = file.get("thumb_480") or file.get("url_private")
+                image_url = file.get("url_private")
                 base64_image = image_url_to_base64(image_url)
                 content.append(
                     {
