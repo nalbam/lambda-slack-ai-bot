@@ -159,8 +159,8 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
             print("Failed to retrieve thread messages.")
 
         res_messages = response.get("messages", [])
-        res_messages.pop(0)  # remove the first message
         res_messages.reverse()
+        res_messages.pop(0)  # remove the first message
 
         for message in res_messages:
             if message.get("client_msg_id", "") == client_msg_id:
