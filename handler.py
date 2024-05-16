@@ -102,7 +102,7 @@ def chat_update(channel, message, latest_ts):
     app.client.chat_update(channel=channel, text=message, ts=latest_ts)
 
 
-@retry(tries=10, delay=1, backoff=2, max_delay=4)
+@retry(tries=3, delay=1, backoff=2, max_delay=4)
 def reply(messages, channel, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
@@ -203,6 +203,26 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         chat_update(channel, message, latest_ts)
 
 
+def content_from_message(event):
+    content = []
+    content.append({"type": "text", "text": event["text"]})
+
+    if "files" in event:
+        files = event.get("files", [])
+        for file in files:
+            if file["mimetype"].startswith("image"):
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": file.get("thumb_480") or file.get("url_private"),
+                        },
+                    }
+                )
+
+    return content
+
+
 # Handle the app_mention event
 @app.event("app_mention")
 def handle_mention(body: dict, say: Say):
@@ -219,21 +239,7 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = []
-    content.append({"type": "text", "text": prompt})
-
-    if "files" in event:
-        files = event.get("files", [])
-        for file in files:
-            if file["mimetype"].startswith("image"):
-                content.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": file.get("url_private"),
-                        },
-                    }
-                )
+    content = content_from_message(event)
 
     conversation(say, thread_ts, content, channel, user, client_msg_id)
 
@@ -253,21 +259,7 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = []
-    content.append({"type": "text", "text": prompt})
-
-    if "files" in event:
-        files = event.get("files", [])
-        for file in files:
-            if file["mimetype"].startswith("image"):
-                content.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": file.get("url_private"),
-                        },
-                    }
-                )
+    content = content_from_message(event)
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     conversation(say, None, content, channel, user, client_msg_id)
@@ -286,21 +278,7 @@ def handle_summary(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = []
-    content.append({"type": "text", "text": prompt})
-
-    if "files" in event:
-        files = event.get("files", [])
-        for file in files:
-            if file["mimetype"].startswith("image"):
-                content.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": file.get("url_private"),
-                        },
-                    }
-                )
+    content = content_from_message(event)
 
     conversation(say, thread_ts, content, channel, user, client_msg_id)
 
