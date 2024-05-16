@@ -3,3 +3,4 @@ openai
 retry
 slack-bolt
 slack-sdk
+requests
