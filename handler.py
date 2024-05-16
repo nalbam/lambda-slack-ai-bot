@@ -216,6 +216,8 @@ def image_url_to_base64(image_url):
 
     if response.status_code == 200:
         encoded_image = base64.b64encode(response.content).decode("utf-8")
+    else:
+        print("Failed to fetch image: {}".format(image_url))
 
     return encoded_image
 
@@ -228,15 +230,15 @@ def content_from_message(prompt, event):
         files = event.get("files", [])
         for file in files:
             if file["mimetype"].startswith("image"):
-                # mimetype = file["mimetype"]
+                mimetype = file["mimetype"]
                 image_url = file.get("thumb_480") or file.get("url_private")
-                # base64_image = image_url_to_base64(image_url)
+                base64_image = image_url_to_base64(image_url)
                 content.append(
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": image_url,
-                            # "url": f"data:{mimetype};base64,{base64_image}"
+                            # "url": image_url,
+                            "url": f"data:{mimetype};base64,{base64_image}"
                         },
                     }
                 )
