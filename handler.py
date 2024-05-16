@@ -5,6 +5,8 @@ import os
 import re
 import sys
 import time
+import base64
+import requests
 
 from retry import retry
 
@@ -156,7 +158,11 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         if not response.get("ok"):
             print("Failed to retrieve thread messages.")
 
-        for message in response.get("messages", [])[::-1]:
+        res_messages = response.get("messages", [])
+        res_messages.pop(0)  # remove the first message
+        res_messages.reverse()
+
+        for message in res_messages:
             if message.get("client_msg_id", "") == client_msg_id:
                 continue
 
@@ -203,6 +209,17 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         chat_update(channel, message, latest_ts)
 
 
+def image_url_to_base64(image_url):
+    response = requests.get(image_url)
+
+    encoded_image = None
+
+    if response.status_code == 200:
+        encoded_image = base64.b64encode(response.content).decode("utf-8")
+
+    return encoded_image
+
+
 def content_from_message(prompt, event):
     content = []
     content.append({"type": "text", "text": prompt})
@@ -211,11 +228,17 @@ def content_from_message(prompt, event):
         files = event.get("files", [])
         for file in files:
             if file["mimetype"].startswith("image"):
+                mimetype = file["mimetype"]
+                base64_image = image_url_to_base64(
+                    file.get("thumb_480") or file.get("url_private")
+                )
+
                 content.append(
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": file.get("thumb_480") or file.get("url_private"),
+                            # "url": file.get("thumb_480") or file.get("url_private"),
+                            "url": f"data:{mimetype};base64,{base64_image}"
                         },
                     }
                 )
