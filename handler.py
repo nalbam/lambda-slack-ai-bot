@@ -200,6 +200,8 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
     try:
         messages = messages[::-1]  # reversed
 
+        print("conversation: {}".format(json.dumps(messages)))
+
         # Send the prompt to ChatGPT
         message = reply(messages, channel, latest_ts, user)
 
@@ -212,7 +214,6 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
     except Exception as e:
         print("conversation: Error handling message: {}".format(e))
         print("conversation: OpenAI Model: {}".format(OPENAI_MODEL))
-        print("conversation: {}".format(json.dumps(messages)))
 
         message = f"Error: ```{e}```"
 
