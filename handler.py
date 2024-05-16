@@ -229,16 +229,14 @@ def content_from_message(prompt, event):
         for file in files:
             if file["mimetype"].startswith("image"):
                 # mimetype = file["mimetype"]
-                # base64_image = image_url_to_base64(
-                #     file.get("thumb_480") or file.get("url_private")
-                # )
+                image_url = file.get("thumb_480") or file.get("url_private")
+                # base64_image = image_url_to_base64(image_url)
                 content.append(
                     {
                         "type": "image_url",
                         "image_url": {
-                            # "url": file.get("thumb_480") or file.get("url_private"),
+                            "url": image_url,
                             # "url": f"data:{mimetype};base64,{base64_image}"
-                            "url": "https://files.slack.com/files-tmb/T03FUG4UB-F073MT87ZGV-ecd45133fa/gfp-wisconsin-madison-the-nature-boardwalk_800.jpg"
                         },
                     }
                 )
