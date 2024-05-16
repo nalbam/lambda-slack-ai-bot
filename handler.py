@@ -18,7 +18,11 @@ BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 # Set up ChatGPT API credentials
 OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
+IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
+IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "standard")
 
 # Set up Slack API credentials
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
@@ -160,7 +164,23 @@ def conversation(say: Say, thread_ts, prompt, channel, user, client_msg_id):
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            content = message.get("text", "")
+            # content = message.get("text", "")
+
+            content = []
+            content.append({"type": "type", "text": message.get("text", "")})
+
+            if "files" in message:
+                files = message.get("files", [])
+                for file in files:
+                    if file["mimetype"].startswith("image"):
+                        content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": file.get("url_private"),
+                                },
+                            }
+                        )
 
             messages.append(
                 {
