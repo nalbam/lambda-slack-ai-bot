@@ -229,8 +229,8 @@ def content_from_message(prompt, event):
     if "files" in event:
         files = event.get("files", [])
         for file in files:
-            if file["mimetype"].startswith("image"):
-                mimetype = file["mimetype"]
+            mimetype = file["mimetype"]
+            if mimetype.startswith("image"):
                 image_url = file.get("thumb_480") or file.get("url_private")
                 base64_image = image_url_to_base64(image_url)
                 content.append(
