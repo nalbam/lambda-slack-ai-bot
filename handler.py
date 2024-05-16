@@ -203,9 +203,9 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         chat_update(channel, message, latest_ts)
 
 
-def content_from_message(event):
+def content_from_message(prompt, event):
     content = []
-    content.append({"type": "text", "text": event["text"]})
+    content.append({"type": "text", "text": prompt})
 
     if "files" in event:
         files = event.get("files", [])
@@ -239,7 +239,7 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = content_from_message(event)
+    content = content_from_message(prompt, event)
 
     conversation(say, thread_ts, content, channel, user, client_msg_id)
 
@@ -259,7 +259,7 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = content_from_message(event)
+    content = content_from_message(prompt, event)
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     conversation(say, None, content, channel, user, client_msg_id)
@@ -278,7 +278,7 @@ def handle_summary(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = content_from_message(event)
+    content = content_from_message(prompt, event)
 
     conversation(say, thread_ts, content, channel, user, client_msg_id)
 
