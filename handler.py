@@ -97,13 +97,15 @@ def put_context(thread_ts, user, conversation=""):
 
 
 # Update the message in Slack
-def chat_update(channel, message, latest_ts):
+def chat_update(channel, latest_ts, message, blocks=None):
     # print("chat_update: {}".format(message))
-    app.client.chat_update(channel=channel, text=message, ts=latest_ts)
+    app.client.chat_update(channel=channel, ts=latest_ts, text=message, blocks=blocks)
 
 
-# Send the prompt to ChatGPT and return the response
-def reply(messages, channel, latest_ts, user):
+# Reply to the message
+def reply_text(messages, channel, latest_ts, user):
+    chat_update(channel, BOT_CURSOR, latest_ts)
+
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
@@ -125,13 +127,44 @@ def reply(messages, channel, latest_ts, user):
 
         counter = counter + 1
 
-    chat_update(channel, message, latest_ts)
+    chat_update(channel, latest_ts, message)
 
     return message
 
 
+# Reply to the image
+def reply_image(messages, channel, latest_ts, user):
+    chat_update(channel, BOT_CURSOR, latest_ts)
+
+    response = openai.images.generate(
+        model=IMAGE_MODEL,
+        messages=messages,
+        temperature=TEMPERATURE,
+        size=IMAGE_SIZE,
+        quality=IMAGE_QUALITY,
+        user=user,
+        n=1,
+    )
+
+    image_url = response.data[0].url
+
+    blocks = [
+        {
+            "type": "image",
+            "image_url": image_url,
+            "alt_text": "Generated Image",
+        }
+    ]
+
+    chat_update(channel, latest_ts, None, blocks)
+
+    return image_url
+
+
 # Handle the chatgpt conversation
-def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
+def conversation(
+    say: Say, thread_ts, content, channel, user, client_msg_id, type="text"
+):
     print("conversation: {}".format(json.dumps(content)))
 
     # Keep track of the latest message timestamp
@@ -189,7 +222,10 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         print("conversation: {}".format(json.dumps(messages)))
 
         # Send the prompt to ChatGPT
-        message = reply(messages, channel, latest_ts, user)
+        if type == "image":
+            message = reply_image(messages, channel, latest_ts, user)
+        else:
+            message = reply_text(messages, channel, latest_ts, user)
 
         print("conversation: {}".format(message))
 
@@ -265,9 +301,13 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
+    type = "text"
+    if "그려줘" in prompt:
+        type = "image"
+
     content = content_from_message(prompt, event)
 
-    conversation(say, thread_ts, content, channel, user, client_msg_id)
+    conversation(say, thread_ts, content, channel, user, client_msg_id, type)
 
 
 # Handle the DM (direct message) event
