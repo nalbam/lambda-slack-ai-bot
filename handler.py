@@ -141,6 +141,7 @@ def reply_image(prompt, channel, latest_ts, user):
         prompt=prompt,
         size=IMAGE_SIZE,
         quality=IMAGE_QUALITY,
+        user=user,
         n=1,
     )
 
