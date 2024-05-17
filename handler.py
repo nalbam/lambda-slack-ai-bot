@@ -104,8 +104,6 @@ def chat_update(channel, latest_ts, message, blocks=None):
 
 # Reply to the message
 def reply_text(messages, channel, latest_ts, user):
-    chat_update(channel, latest_ts, BOT_CURSOR)
-
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
@@ -133,15 +131,12 @@ def reply_text(messages, channel, latest_ts, user):
 
 
 # Reply to the image
-def reply_image(prompt, channel, latest_ts, user):
-    chat_update(channel, latest_ts, BOT_CURSOR)
-
+def reply_image(prompt, channel, latest_ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
         size=IMAGE_SIZE,
         quality=IMAGE_QUALITY,
-        user=user,
         n=1,
     )
 
@@ -161,9 +156,7 @@ def reply_image(prompt, channel, latest_ts, user):
 
 
 # Handle the chatgpt conversation
-def conversation(
-    say: Say, thread_ts, content, channel, user, client_msg_id, type="text"
-):
+def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     print("conversation: {}".format(json.dumps(content)))
 
     # Keep track of the latest message timestamp
@@ -221,20 +214,36 @@ def conversation(
         print("conversation: {}".format(json.dumps(messages)))
 
         # Send the prompt to ChatGPT
-        if type == "image":
-            message = reply_image(messages, channel, latest_ts, user)
-        else:
-            message = reply_text(messages, channel, latest_ts, user)
+        message = reply_text(messages, channel, latest_ts, user)
 
         print("conversation: {}".format(message))
-
-        # if message != "":
-        #     messages.append({"role": "assistant", "content": message})
-        #     put_context(thread_ts, user, json.dumps(messages))
 
     except Exception as e:
         print("conversation: Error handling message: {}".format(e))
         print("conversation: OpenAI Model: {}".format(OPENAI_MODEL))
+
+        message = f"Error: ```{e}```"
+
+        # say(text=message, thread_ts=thread_ts)
+        chat_update(channel, latest_ts, message)
+
+
+def image_generate(say: Say, thread_ts, prompt, channel):
+    print("image_generate: {}".format(prompt))
+
+    # Keep track of the latest message timestamp
+    result = say(text=BOT_CURSOR, thread_ts=thread_ts)
+    latest_ts = result["ts"]
+
+    try:
+        # Send the prompt to ChatGPT
+        message = reply_image(prompt, channel, latest_ts)
+
+        print("image_generate: {}".format(message))
+
+    except Exception as e:
+        print("image_generate: Error handling message: {}".format(e))
+        print("image_generate: OpenAI Model: {}".format(IMAGE_MODEL))
 
         message = f"Error: ```{e}```"
 
@@ -260,6 +269,9 @@ def image_url_to_base64(image_url):
 
 # Extract content from the message
 def content_from_message(prompt, event):
+    if "그려줘" in prompt:
+        return prompt, "image"
+
     content = []
     content.append({"type": "text", "text": prompt})
 
@@ -281,7 +293,7 @@ def content_from_message(prompt, event):
                         }
                     )
 
-    return content
+    return content, "text"
 
 
 # Handle the app_mention event
@@ -300,13 +312,12 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    type = "text"
-    if "그려줘" in prompt:
-        type = "image"
+    content, type = content_from_message(prompt, event)
 
-    content = content_from_message(prompt, event)
-
-    conversation(say, thread_ts, content, channel, user, client_msg_id, type)
+    if type == "image":
+        image_generate(say, thread_ts, prompt, channel)
+    else:
+        conversation(say, thread_ts, content, channel, user, client_msg_id, type)
 
 
 # Handle the DM (direct message) event
@@ -324,10 +335,13 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content = content_from_message(prompt, event)
+    content, type = content_from_message(prompt, event)
 
     # Use thread_ts=None for regular messages, and user ID for DMs
-    conversation(say, None, content, channel, user, client_msg_id)
+    if type == "image":
+        image_generate(say, None, prompt, channel)
+    else:
+        conversation(say, None, content, channel, user, client_msg_id, type)
 
 
 # Handle the Lambda function
