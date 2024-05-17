@@ -140,6 +140,8 @@ def reply_image(prompt, channel, thread_ts):
         n=1,
     )
 
+    print("reply_image: {}".format(response))
+
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
@@ -223,9 +225,8 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         print("conversation: Error handling message: {}".format(e))
         print("conversation: OpenAI Model: {}".format(OPENAI_MODEL))
 
-        message = f"Error: ```{e}```"
+        message = f"```{e}```"
 
-        # say(text=message, thread_ts=thread_ts)
         chat_update(channel, latest_ts, message)
 
 
@@ -249,9 +250,8 @@ def image_generate(say: Say, thread_ts, prompt, channel):
         print("image_generate: Error handling message: {}".format(e))
         print("image_generate: OpenAI Model: {}".format(IMAGE_MODEL))
 
-        message = f"Error: ```{e}```"
+        message = f"```{e}```"
 
-        # say(text=message, thread_ts=thread_ts)
         chat_update(channel, latest_ts, message)
 
 
