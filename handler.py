@@ -243,7 +243,7 @@ def image_generate(say: Say, thread_ts, prompt, channel):
 
     try:
         # Send the prompt to ChatGPT
-        message = reply_image(prompt, channel, thread_ts)
+        message = reply_image(prompt, channel, latest_ts)
 
         print("image_generate: {}".format(message))
 
