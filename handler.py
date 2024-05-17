@@ -104,7 +104,7 @@ def chat_update(channel, latest_ts, message, blocks=None):
 
 # Reply to the message
 def reply_text(messages, channel, latest_ts, user):
-    chat_update(channel, BOT_CURSOR, latest_ts)
+    chat_update(channel, latest_ts, BOT_CURSOR)
 
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
@@ -123,7 +123,7 @@ def reply_text(messages, channel, latest_ts, user):
             message += reply
 
         if counter % 16 == 1:
-            chat_update(channel, message + " " + BOT_CURSOR, latest_ts)
+            chat_update(channel, latest_ts, message + " " + BOT_CURSOR)
 
         counter = counter + 1
 
@@ -134,7 +134,7 @@ def reply_text(messages, channel, latest_ts, user):
 
 # Reply to the image
 def reply_image(messages, channel, latest_ts, user):
-    chat_update(channel, BOT_CURSOR, latest_ts)
+    chat_update(channel, latest_ts, BOT_CURSOR)
 
     response = openai.images.generate(
         model=IMAGE_MODEL,
@@ -240,7 +240,7 @@ def conversation(
         message = f"Error: ```{e}```"
 
         # say(text=message, thread_ts=thread_ts)
-        chat_update(channel, message, latest_ts)
+        chat_update(channel, latest_ts, message)
 
 
 # Convert image URL to base64
