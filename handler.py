@@ -228,6 +228,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         chat_update(channel, latest_ts, message)
 
 
+# Handle the image generation
 def image_generate(say: Say, thread_ts, prompt, channel):
     print("image_generate: {}".format(prompt))
 
@@ -317,7 +318,7 @@ def handle_mention(body: dict, say: Say):
     if type == "image":
         image_generate(say, thread_ts, prompt, channel)
     else:
-        conversation(say, thread_ts, content, channel, user, client_msg_id, type)
+        conversation(say, thread_ts, content, channel, user, client_msg_id)
 
 
 # Handle the DM (direct message) event
@@ -341,7 +342,7 @@ def handle_message(body: dict, say: Say):
     if type == "image":
         image_generate(say, None, prompt, channel)
     else:
-        conversation(say, None, content, channel, user, client_msg_id, type)
+        conversation(say, None, content, channel, user, client_msg_id)
 
 
 # Handle the Lambda function
