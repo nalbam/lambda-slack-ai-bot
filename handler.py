@@ -131,7 +131,7 @@ def reply_text(messages, channel, latest_ts, user):
 
 
 # Reply to the image
-def reply_image(prompt, channel, latest_ts):
+def reply_image(prompt, channel, thread_ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
@@ -148,12 +148,10 @@ def reply_image(prompt, channel, latest_ts):
     file = get_image_from_url(image_url)
 
     response = app.client.files_upload_v2(
-        channel=channel, filename=filename, file=file, thread_ts=latest_ts
+        channel=channel, filename=filename, file=file, thread_ts=thread_ts
     )
 
     print("reply_image: {}".format(response))
-
-    app.client.chat_delete(channel=channel, ts=latest_ts)
 
     return image_url
 
@@ -241,9 +239,11 @@ def image_generate(say: Say, thread_ts, prompt, channel):
 
     try:
         # Send the prompt to ChatGPT
-        message = reply_image(prompt, channel, latest_ts)
+        message = reply_image(prompt, channel, thread_ts)
 
         print("image_generate: {}".format(message))
+
+        app.client.chat_delete(channel=channel, ts=latest_ts)
 
     except Exception as e:
         print("image_generate: Error handling message: {}".format(e))
