@@ -8,8 +8,6 @@ import time
 import base64
 import requests
 
-from retry import retry
-
 from openai import OpenAI
 
 from slack_bolt import App, Say
@@ -104,7 +102,7 @@ def chat_update(channel, message, latest_ts):
     app.client.chat_update(channel=channel, text=message, ts=latest_ts)
 
 
-# @retry(tries=3, delay=1, backoff=2, max_delay=4)
+# Send the prompt to ChatGPT and return the response
 def reply(messages, channel, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
@@ -209,6 +207,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         chat_update(channel, message, latest_ts)
 
 
+# Convert image URL to base64
 def image_url_to_base64(image_url):
     response = requests.get(
         image_url, headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
@@ -224,6 +223,7 @@ def image_url_to_base64(image_url):
     return encoded_image
 
 
+# Extract content from the message
 def content_from_message(prompt, event):
     content = []
     content.append({"type": "text", "text": prompt})
@@ -291,6 +291,7 @@ def handle_message(body: dict, say: Say):
     conversation(say, None, content, channel, user, client_msg_id)
 
 
+# Handle the Lambda function
 def lambda_handler(event, context):
     body = json.loads(event["body"])
 
