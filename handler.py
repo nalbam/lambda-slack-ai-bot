@@ -270,7 +270,7 @@ def image_url_to_base64(image_url):
 
 # Extract content from the message
 def content_from_message(prompt, event):
-    if "그려줘" in prompt:
+    if "!그려줘" in prompt or "!이미지" in prompt or "!image" in prompt:
         return prompt, "image"
 
     content = []
