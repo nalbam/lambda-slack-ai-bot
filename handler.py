@@ -144,21 +144,16 @@ def reply_image(prompt, channel, latest_ts):
 
     file_ext = image_url.split(".")[-1].split("?")[0]
     filename = "{}.{}".format(IMAGE_MODEL, file_ext)
+
     file = get_image_from_url(image_url)
 
-    response = app.client.files_upload_v2(channel=channel, filename=filename, file=file, thread_ts=latest_ts)
+    response = app.client.files_upload_v2(
+        channel=channel, filename=filename, file=file, thread_ts=latest_ts
+    )
 
     print("reply_image: {}".format(response))
 
-    # blocks = [
-    #     {
-    #         "type": "image",
-    #         "image_url": image_url,
-    #         "alt_text": "Generated Image",
-    #     }
-    # ]
-
-    # chat_update(channel, latest_ts, None, blocks)
+    app.client.chat_delete(channel=channel, ts=latest_ts)
 
     return image_url
 
