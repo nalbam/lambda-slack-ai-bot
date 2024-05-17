@@ -133,16 +133,14 @@ def reply_text(messages, channel, latest_ts, user):
 
 
 # Reply to the image
-def reply_image(messages, channel, latest_ts, user):
+def reply_image(prompt, channel, latest_ts, user):
     chat_update(channel, latest_ts, BOT_CURSOR)
 
     response = openai.images.generate(
         model=IMAGE_MODEL,
-        messages=messages,
-        temperature=TEMPERATURE,
+        prompt=prompt,
         size=IMAGE_SIZE,
         quality=IMAGE_QUALITY,
-        user=user,
         n=1,
     )
 
