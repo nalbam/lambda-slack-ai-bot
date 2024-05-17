@@ -97,13 +97,13 @@ def put_context(thread_ts, user, conversation=""):
 
 
 # Update the message in Slack
-def chat_update(channel, latest_ts, message, blocks=None):
+def chat_update(channel, ts, message, blocks=None):
     # print("chat_update: {}".format(message))
-    app.client.chat_update(channel=channel, ts=latest_ts, text=message, blocks=blocks)
+    app.client.chat_update(channel=channel, ts=ts, text=message, blocks=blocks)
 
 
 # Reply to the message
-def reply_text(messages, channel, latest_ts, user):
+def reply_text(messages, channel, ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
@@ -121,17 +121,17 @@ def reply_text(messages, channel, latest_ts, user):
             message += reply
 
         if counter % 16 == 1:
-            chat_update(channel, latest_ts, message + " " + BOT_CURSOR)
+            chat_update(channel, ts, message + " " + BOT_CURSOR)
 
         counter = counter + 1
 
-    chat_update(channel, latest_ts, message)
+    chat_update(channel, ts, message)
 
     return message
 
 
 # Reply to the image
-def reply_image(prompt, channel, thread_ts):
+def reply_image(prompt, channel, ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
@@ -142,6 +142,7 @@ def reply_image(prompt, channel, thread_ts):
 
     print("reply_image: {}".format(response))
 
+    revised_prompt = response.data[0].revised_prompt
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
@@ -150,10 +151,12 @@ def reply_image(prompt, channel, thread_ts):
     file = get_image_from_url(image_url)
 
     response = app.client.files_upload_v2(
-        channel=channel, filename=filename, file=file, thread_ts=thread_ts
+        channel=channel, filename=filename, file=file, thread_ts=ts
     )
 
     print("reply_image: {}".format(response))
+
+    chat_update(channel, ts, revised_prompt)
 
     return image_url
 
@@ -244,7 +247,7 @@ def image_generate(say: Say, thread_ts, prompt, channel):
 
         print("image_generate: {}".format(message))
 
-        app.client.chat_delete(channel=channel, ts=latest_ts)
+        # app.client.chat_delete(channel=channel, ts=latest_ts)
 
     except Exception as e:
         print("image_generate: Error handling message: {}".format(e))
