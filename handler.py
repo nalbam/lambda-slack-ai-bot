@@ -142,6 +142,13 @@ def reply_image(prompt, channel, latest_ts):
 
     image_url = response.data[0].url
 
+    filename = "{}.{}".format(IMAGE_MODEL, image_url.split(".")[-1])
+    file = get_image_from_url(image_url)
+
+    response = app.client.files_upload_v2(channel=channel, filename=filename, file=file)
+
+    print("reply_image: {}".format(response))
+
     blocks = [
         {
             "type": "image",
@@ -252,8 +259,18 @@ def image_generate(say: Say, thread_ts, prompt, channel):
         chat_update(channel, latest_ts, message)
 
 
+# Get image from URL
+def get_image_from_url(image_url):
+    response = requests.get(image_url)
+
+    if response.status_code == 200:
+        return response.content
+
+    return None
+
+
 # Convert image URL to base64
-def image_url_to_base64(image_url):
+def get_encoded_image_slack(image_url):
     response = requests.get(
         image_url, headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
     )
@@ -282,7 +299,7 @@ def content_from_message(prompt, event):
             mimetype = file["mimetype"]
             if mimetype.startswith("image"):
                 image_url = file.get("url_private")
-                base64_image = image_url_to_base64(image_url)
+                base64_image = get_encoded_image_slack(image_url)
                 if base64_image:
                     content.append(
                         {
