@@ -104,7 +104,7 @@ def chat_update(channel, message, latest_ts):
     app.client.chat_update(channel=channel, text=message, ts=latest_ts)
 
 
-@retry(tries=3, delay=1, backoff=2, max_delay=4)
+# @retry(tries=3, delay=1, backoff=2, max_delay=4)
 def reply(messages, channel, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
@@ -289,24 +289,6 @@ def handle_message(body: dict, say: Say):
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     conversation(say, None, content, channel, user, client_msg_id)
-
-
-# Handle the summary event
-@app.event("summarize")
-def handle_summary(body: dict, say: Say):
-    print("handle_summary: {}".format(body))
-
-    event = body["event"]
-
-    thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
-    prompt = "이 대화를 요약해줘."
-    channel = event["channel"]
-    user = event["user"]
-    client_msg_id = event["client_msg_id"]
-
-    content = content_from_message(prompt, event)
-
-    conversation(say, thread_ts, content, channel, user, client_msg_id)
 
 
 def lambda_handler(event, context):
