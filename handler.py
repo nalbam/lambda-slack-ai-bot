@@ -162,9 +162,9 @@ def reply_image(content, channel, ts):
 
     print("reply_image: {}".format(response))
 
-    if response.data[0].revised_prompt:
+    try:
         revised_prompt = response.data[0].revised_prompt
-    else:
+    except Exception as e:
         revised_prompt = "generated image from {}".format(model)
 
     image_url = response.data[0].url
