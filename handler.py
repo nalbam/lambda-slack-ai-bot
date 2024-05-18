@@ -139,8 +139,9 @@ def reply_image(content, channel, ts):
         response = openai.images.create_variation(
             model=model,
             image=image,
-            prompt=prompt,
+            # prompt=prompt,
             size=IMAGE_SIZE,
+            # quality=IMAGE_QUALITY,
             n=1,
         )
     else:
