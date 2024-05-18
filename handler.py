@@ -327,7 +327,7 @@ def content_from_message(prompt, event):
                     byte_stream = BytesIO(image)
                     image = Image.open(byte_stream)
 
-                    # image = image.resize((1024, 1024))
+                    image = image.resize((512, 512))
 
                     # Convert the image to PNG format
                     byte_stream = BytesIO()
