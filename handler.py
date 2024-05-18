@@ -162,6 +162,10 @@ def reply_image(content, channel, ts):
 
     print("reply_image: {}".format(response))
 
+    revised_prompt = response.data[0].revised_prompt
+    if not revised_prompt:
+        revised_prompt = "generated image from {}".format(model)
+
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
@@ -174,10 +178,6 @@ def reply_image(content, channel, ts):
     )
 
     print("reply_image: {}".format(response))
-
-    revised_prompt = response.data[0].revised_prompt
-    if not revised_prompt:
-        revised_prompt = "generated image from {}".format(model)
 
     chat_update(channel, ts, revised_prompt)
 
