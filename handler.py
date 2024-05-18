@@ -131,14 +131,26 @@ def reply_text(messages, channel, ts, user):
 
 
 # Reply to the image
-def reply_image(prompt, channel, ts):
-    response = openai.images.generate(
-        model=IMAGE_MODEL,
-        prompt=prompt,
-        size=IMAGE_SIZE,
-        quality=IMAGE_QUALITY,
-        n=1,
-    )
+def reply_image(content, channel, ts):
+    image = content.get("image", None)
+    if image:
+        model = "dall-e-2"
+        response = openai.images.create_variation(
+            model=model,
+            image=image,
+            size=IMAGE_SIZE,
+            quality=IMAGE_QUALITY,
+            n=1,
+        )
+    else:
+        model = IMAGE_MODEL
+        response = openai.images.generate(
+            model=model,
+            prompt=content.get("prompt", ""),
+            size=IMAGE_SIZE,
+            quality=IMAGE_QUALITY,
+            n=1,
+        )
 
     print("reply_image: {}".format(response))
 
@@ -146,7 +158,7 @@ def reply_image(prompt, channel, ts):
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
-    filename = "{}.{}".format(IMAGE_MODEL, file_ext)
+    filename = "{}.{}".format(model, file_ext)
 
     file = get_image_from_url(image_url)
 
@@ -234,8 +246,8 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
 
 # Handle the image generation
-def image_generate(say: Say, thread_ts, prompt, channel):
-    print("image_generate: {}".format(prompt))
+def image_generate(say: Say, thread_ts, content, channel):
+    print("image_generate: {}".format(content))
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
@@ -243,7 +255,7 @@ def image_generate(say: Say, thread_ts, prompt, channel):
 
     try:
         # Send the prompt to ChatGPT
-        message = reply_image(prompt, channel, latest_ts)
+        message = reply_image(content, channel, latest_ts)
 
         print("image_generate: {}".format(message))
 
@@ -259,35 +271,49 @@ def image_generate(say: Say, thread_ts, prompt, channel):
 
 
 # Get image from URL
-def get_image_from_url(image_url):
-    response = requests.get(image_url)
+def get_image_from_url(image_url, token=None):
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    response = requests.get(image_url, headers=headers)
 
     if response.status_code == 200:
         return response.content
+    else:
+        print("Failed to fetch image: {}".format(image_url))
 
     return None
 
 
-# Convert image URL to base64
-def get_encoded_image_slack(image_url):
-    response = requests.get(
-        image_url, headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
-    )
+# Get image from Slack
+def get_image_from_slack(image_url):
+    return get_image_from_url(image_url, SLACK_BOT_TOKEN)
 
-    encoded_image = None
 
-    if response.status_code == 200:
-        encoded_image = base64.b64encode(response.content).decode("utf-8")
-    else:
-        print("Failed to fetch image: {}".format(image_url))
+# Get encoded image from Slack
+def get_encoded_image_from_slack(image_url):
+    image = get_image_from_slack(image_url)
 
-    return encoded_image
+    if image:
+        return base64.b64encode(image).decode("utf-8")
+
+    return None
 
 
 # Extract content from the message
 def content_from_message(prompt, event):
     if "그려줘" in prompt or "!이미지" in prompt or "!image" in prompt:
-        return prompt, "image"
+        image = None
+        if "files" in event:
+            files = event.get("files", [])
+            image_url = files[0].get("url_private")
+            image = get_image_from_slack(image_url)
+        content = {
+            "prompt": prompt,
+            "image": image,
+        }
+        return content, "image"
 
     content = []
     content.append({"type": "text", "text": prompt})
@@ -298,7 +324,7 @@ def content_from_message(prompt, event):
             mimetype = file["mimetype"]
             if mimetype.startswith("image"):
                 image_url = file.get("url_private")
-                base64_image = get_encoded_image_slack(image_url)
+                base64_image = get_encoded_image_from_slack(image_url)
                 if base64_image:
                     content.append(
                         {
@@ -332,7 +358,7 @@ def handle_mention(body: dict, say: Say):
     content, type = content_from_message(prompt, event)
 
     if type == "image":
-        image_generate(say, thread_ts, prompt, channel)
+        image_generate(say, thread_ts, content, channel)
     else:
         conversation(say, thread_ts, content, channel, user, client_msg_id)
 
@@ -356,7 +382,7 @@ def handle_message(body: dict, say: Say):
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
-        image_generate(say, None, prompt, channel)
+        image_generate(say, None, content, channel)
     else:
         conversation(say, None, content, channel, user, client_msg_id)
 
