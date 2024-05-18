@@ -309,21 +309,23 @@ def get_encoded_image_from_slack(image_url):
 # Extract content from the message
 def content_from_message(prompt, event):
     if "그려줘" in prompt or "!이미지" in prompt or "!image" in prompt:
-        image = None
+        byte_array = None
+
         if "files" in event:
             files = event.get("files", [])
-            image_url = files[0].get("url_private")
+            if len(files) > 0:
+                image = get_image_from_slack(files[0].get("url_private"))
 
-            image = get_image_from_slack(image_url)
+                # Convert the image to a BytesIO object
+                byte_stream = BytesIO()
+                image.save(byte_stream, format="PNG")
+                byte_array = byte_stream.getvalue()
 
-            # Convert the image to a BytesIO object
-            byte_stream = BytesIO()
-            image.save(byte_stream, format="PNG")
-            byte_array = byte_stream.getvalue()
         content = {
             "prompt": prompt,
             "image": byte_array,
         }
+
         return content, "image"
 
     content = []
