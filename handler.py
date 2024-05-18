@@ -135,10 +135,14 @@ def reply_text(messages, channel, ts, user):
 
 # Reply to the image
 def reply_image(content, channel, ts):
+    model = IMAGE_MODEL
+
     image = content.get("image", None)
     prompt = content.get("prompt", "")
+
     if image:
         model = "dall-e-2"
+
         response = openai.images.create_variation(
             model=model,
             image=image,
@@ -148,7 +152,6 @@ def reply_image(content, channel, ts):
             n=1,
         )
     else:
-        model = IMAGE_MODEL
         response = openai.images.generate(
             model=model,
             prompt=prompt,
@@ -159,7 +162,11 @@ def reply_image(content, channel, ts):
 
     print("reply_image: {}".format(response))
 
-    revised_prompt = response.data[0].revised_prompt
+    if response.data[0].revised_prompt:
+        revised_prompt = response.data[0].revised_prompt
+    else:
+        revised_prompt = "generated image from {}".format(model)
+
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
