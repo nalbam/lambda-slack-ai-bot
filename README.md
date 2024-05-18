@@ -10,7 +10,7 @@ $ npm install -g serverless
 $ sls plugin install -n serverless-python-requirements
 $ sls plugin install -n serverless-dotenv-plugin
 
-$ pip3 install --upgrade -r requirements.txt
+$ python -m pip install --upgrade -r requirements.txt
 ```
 
 ## Setup

@@ -8,6 +8,9 @@ import time
 import base64
 import requests
 
+from io import BytesIO
+from PIL import Image
+
 from openai import OpenAI
 
 from slack_bolt import App, Say
@@ -310,10 +313,16 @@ def content_from_message(prompt, event):
         if "files" in event:
             files = event.get("files", [])
             image_url = files[0].get("url_private")
+
             image = get_image_from_slack(image_url)
+
+            # Convert the image to a BytesIO object
+            byte_stream = BytesIO()
+            image.save(byte_stream, format="PNG")
+            byte_array = byte_stream.getvalue()
         content = {
             "prompt": prompt,
-            "image": image,
+            "image": byte_array,
         }
         return content, "image"
 
