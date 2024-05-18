@@ -133,20 +133,21 @@ def reply_text(messages, channel, ts, user):
 # Reply to the image
 def reply_image(content, channel, ts):
     image = content.get("image", None)
+    prompt = content.get("prompt", "")
     if image:
         model = "dall-e-2"
         response = openai.images.create_variation(
             model=model,
             image=image,
+            prompt=prompt,
             size=IMAGE_SIZE,
-            quality=IMAGE_QUALITY,
             n=1,
         )
     else:
         model = IMAGE_MODEL
         response = openai.images.generate(
             model=model,
-            prompt=content.get("prompt", ""),
+            prompt=prompt,
             size=IMAGE_SIZE,
             quality=IMAGE_QUALITY,
             n=1,
