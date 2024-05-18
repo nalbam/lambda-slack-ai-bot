@@ -315,9 +315,12 @@ def content_from_message(prompt, event):
             files = event.get("files", [])
             if len(files) > 0:
                 image = get_image_from_slack(files[0].get("url_private"))
-                image = image.resize((1024, 1024))
 
                 # Convert the image to a BytesIO object
+                byte_stream = BytesIO(image)
+                image = Image.open(byte_stream)
+
+                # Convert the image to PNG format
                 byte_stream = BytesIO()
                 image.save(byte_stream, format="PNG")
                 byte_array = byte_stream.getvalue()
