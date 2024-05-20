@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-$ brew install python@3.9
+$ brew install python@3.10
 
 $ npm install -g serverless
 
