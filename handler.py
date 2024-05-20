@@ -134,42 +134,22 @@ def reply_text(messages, channel, ts, user):
 
 
 # Reply to the image
-def reply_image(content, channel, ts):
-    model = IMAGE_MODEL
-
-    image = content.get("image", None)
-    prompt = content.get("prompt", "")
-
-    if image:
-        model = "dall-e-2"
-
-        response = openai.images.edit(
-            model=model,
-            image=image,
-            mask=open("mask.png", "rb"),
-            prompt=prompt,
-            size=IMAGE_SIZE,
-            n=1,
-        )
-    else:
-        response = openai.images.generate(
-            model=model,
-            prompt=prompt,
-            size=IMAGE_SIZE,
-            quality=IMAGE_QUALITY,
-            n=1,
-        )
+def reply_image(prompt, channel, ts):
+    response = openai.images.generate(
+        model=IMAGE_MODEL,
+        prompt=prompt,
+        size=IMAGE_SIZE,
+        quality=IMAGE_QUALITY,
+        n=1,
+    )
 
     print("reply_image: {}".format(response))
 
     revised_prompt = response.data[0].revised_prompt
-    if not revised_prompt:
-        revised_prompt = "generated image from {}".format(model)
-
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
-    filename = "{}.{}".format(model, file_ext)
+    filename = "{}.{}".format(IMAGE_MODEL, file_ext)
 
     file = get_image_from_url(image_url)
 
@@ -193,7 +173,6 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     latest_ts = result["ts"]
 
     messages = []
-
     messages.append(
         {
             "role": "user",
@@ -264,9 +243,28 @@ def image_generate(say: Say, thread_ts, content, channel):
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
+    prompt = content[0]["text"]
+
+    content[0].update({"text": "사진을 보듯이 자세히 알려줘"})
+
+    messages = []
+    messages.append(
+        {
+            "role": "user",
+            "content": content,
+        },
+    )
+
     try:
+        response = openai.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=messages,
+        )
+
+        prompt = prompt + "\n\n" + response.choices[0].message.content
+
         # Send the prompt to ChatGPT
-        message = reply_image(content, channel, latest_ts)
+        message = reply_image(prompt, channel, latest_ts)
 
         print("image_generate: {}".format(message))
 
@@ -314,31 +312,16 @@ def get_encoded_image_from_slack(image_url):
 
 # Extract content from the message
 def content_from_message(prompt, event):
-    if "그려줘" in prompt or "!이미지" in prompt or "!image" in prompt:
-        byte_array = None
+    type = "text"
 
-        if "files" in event:
-            files = event.get("files", [])
-            if len(files) > 0:
-                image = get_image_from_slack(files[0].get("url_private"))
-                if image:
-                    # Convert the image to a BytesIO object
-                    byte_stream = BytesIO(image)
-                    image = Image.open(byte_stream)
-
-                    image = image.resize((512, 512))
-
-                    # Convert the image to PNG format
-                    byte_stream = BytesIO()
-                    image.save(byte_stream, format="PNG")
-                    byte_array = byte_stream.getvalue()
-
-        content = {
-            "prompt": prompt,
-            "image": byte_array,
-        }
-
-        return content, "image"
+    if "그려줘" in prompt:
+        type = "image"
+    # elif "!이미지" in prompt:
+    #     prompt = re.sub(f"!이미지", "", prompt).strip()
+    #     type = "image"
+    # elif "!image" in prompt:
+    #     prompt = re.sub(f"!image", "", prompt).strip()
+    #     type = "image"
 
     content = []
     content.append({"type": "text", "text": prompt})
@@ -361,7 +344,7 @@ def content_from_message(prompt, event):
                         }
                     )
 
-    return content, "text"
+    return content, type
 
 
 # Handle the app_mention event
