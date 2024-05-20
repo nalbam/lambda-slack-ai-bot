@@ -95,11 +95,13 @@ curl https://api.openai.com/v1/chat/completions \
 ```
 
 ```bash
-curl https://api.openai.com/v1/images/edits \
+curl https://api.openai.com/v1/images/generations \
+  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -F image="@cat.png" \
-  -F mask="@mask.png" \
-  -F prompt="A cute baby sea otter wearing a beret" \
-  -F n=1 \
-  -F size="1024x1024"
+  -d '{
+    "model": "dall-e-3",
+    "prompt": "꽁꽁 얼어붙은 한강위로 고양이가 걸어갑니다.",
+    "size": "1024x1024",
+    "n": 1
+  }'
 ```
