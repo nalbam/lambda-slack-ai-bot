@@ -3,4 +3,3 @@ openai
 slack-bolt
 slack-sdk
 requests
-image

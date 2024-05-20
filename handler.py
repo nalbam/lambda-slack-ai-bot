@@ -8,9 +8,6 @@ import time
 import base64
 import requests
 
-from io import BytesIO
-from PIL import Image
-
 from openai import OpenAI
 
 from slack_bolt import App, Say
