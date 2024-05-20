@@ -146,6 +146,7 @@ def reply_image(content, channel, ts):
         response = openai.images.edit(
             model=model,
             image=image,
+            mask=open("mask.png", "rb"),
             prompt=prompt,
             size=IMAGE_SIZE,
             n=1,

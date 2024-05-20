@@ -76,13 +76,30 @@ https://xxxx.execute-api.us-east-1.amazonaws.com/dev/slack/events
 ## OpenAi API Test
 
 ```bash
-curl https://api.openai.com/v1/completions \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
   -d '{
-  "model": "gpt-3.5-turbo",
-  "prompt": "Say this is a test",
-  "max_tokens": 16,
-  "temperature": 0
-}'
+    "model": "gpt-4o",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Hello!"
+      }
+    ]
+  }'
+```
+
+```bash
+curl https://api.openai.com/v1/images/edits \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F image="@cat.png" \
+  -F mask="@mask.png" \
+  -F prompt="A cute baby sea otter wearing a beret" \
+  -F n=1 \
+  -F size="1024x1024"
 ```
