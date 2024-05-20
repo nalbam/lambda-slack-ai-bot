@@ -143,12 +143,11 @@ def reply_image(content, channel, ts):
     if image:
         model = "dall-e-2"
 
-        response = openai.images.create_variation(
+        response = openai.images.edit(
             model=model,
             image=image,
-            # prompt=prompt,
+            prompt=prompt,
             size=IMAGE_SIZE,
-            # quality=IMAGE_QUALITY,
             n=1,
         )
     else:
