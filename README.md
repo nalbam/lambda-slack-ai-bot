@@ -105,3 +105,7 @@ curl https://api.openai.com/v1/images/generations \
     "n": 1
   }'
 ```
+
+## References
+
+* <https://github.com/openai/openai-python>
