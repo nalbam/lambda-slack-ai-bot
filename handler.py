@@ -24,7 +24,7 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
-IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
+IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x768")
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "standard")
 
 # Set up Slack API credentials
@@ -326,7 +326,7 @@ def content_from_message(prompt, event):
                     byte_stream = BytesIO(image)
                     image = Image.open(byte_stream)
 
-                    image = image.resize((512, 512))
+                    image = image.resize((512, 384))
 
                     # Convert the image to PNG format
                     byte_stream = BytesIO()
