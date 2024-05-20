@@ -24,7 +24,7 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
-IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1792x1024")
+IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "standard")
 
 # Set up Slack API credentials
