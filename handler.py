@@ -8,12 +8,19 @@ import time
 import base64
 import requests
 
-from openai import OpenAI
-
 from slack_bolt import App, Say
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
+from openai import OpenAI
+
 BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
+
+# Set up Slack API credentials
+SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
+SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
+
+# Keep track of conversation history by thread and user
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "slack-ai-bot-context")
 
 # Set up ChatGPT API credentials
 OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"]
@@ -23,10 +30,6 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
 IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "standard")
-
-# Set up Slack API credentials
-SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
-SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
 # Set up System messages
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "")
@@ -44,17 +47,15 @@ app = App(
 
 bot_id = app.client.api_call("auth.test")["user_id"]
 
+# Initialize DynamoDB
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+
 # Initialize OpenAI
 openai = OpenAI(
     organization=OPENAI_ORG_ID,
     api_key=OPENAI_API_KEY,
 )
-
-# Keep track of conversation history by thread and user
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-slack-thread")
-
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 # OpenAI system message
 system_message = {
