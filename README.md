@@ -1,4 +1,4 @@
-# lambda-openai-slack-bot
+# lambda-slack-ai-bot
 
 ## Install
 
