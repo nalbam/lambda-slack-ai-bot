@@ -44,7 +44,7 @@ SLACK_BOT_TOKEN="xoxb-xxxx"
 SLACK_SIGNING_SECRET="xxxx"
 ```
 
-### ApenAi API
+### OpenAi API
 
 * <https://platform.openai.com/account/api-keys>
 
