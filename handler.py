@@ -164,37 +164,41 @@ def reply_image(prompt, channel, ts):
 
 # Get thread messages using conversations.replies API method
 def conversations_replies(channel, ts, client_msg_id, messages=[]):
-    response = app.client.conversations_replies(channel=channel, ts=ts)
+    try:
+        response = app.client.conversations_replies(channel=channel, ts=ts)
 
-    print("conversations_replies: {}".format(response))
+        print("conversations_replies: {}".format(response))
 
-    if not response.get("ok"):
-        print("Failed to retrieve thread messages.")
+        if not response.get("ok"):
+            print("Failed to retrieve thread messages.")
 
-    res_messages = response.get("messages", [])
-    res_messages.reverse()
-    res_messages.pop(0)  # remove the first message
+        res_messages = response.get("messages", [])
+        res_messages.reverse()
+        res_messages.pop(0)  # remove the first message
 
-    for message in res_messages:
-        if message.get("client_msg_id", "") == client_msg_id:
-            continue
+        for message in res_messages:
+            if message.get("client_msg_id", "") == client_msg_id:
+                continue
 
-        role = "user"
-        if message.get("bot_id", "") != "":
-            role = "assistant"
+            role = "user"
+            if message.get("bot_id", "") != "":
+                role = "assistant"
 
-        messages.append(
-            {
-                "role": role,
-                "content": message.get("text", ""),
-            }
-        )
+            messages.append(
+                {
+                    "role": role,
+                    "content": message.get("text", ""),
+                }
+            )
 
-        # print("conversation: messages size: {}".format(sys.getsizeof(messages)))
+            # print("conversations_replies: messages size: {}".format(sys.getsizeof(messages)))
 
-        if sys.getsizeof(messages) > MESSAGE_MAX:
-            messages.pop(0)  # remove the oldest message
-            break
+            if sys.getsizeof(messages) > MESSAGE_MAX:
+                messages.pop(0)  # remove the oldest message
+                break
+
+    except Exception as e:
+        print("conversations_replies: {}".format(e))
 
     messages.append(system_message)
 
@@ -271,12 +275,19 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             },
         )
 
-        response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-        )
+        try:
+            response = openai.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=messages,
+            )
 
-        prompts.append(response.choices[0].delta.content)
+            print("image_generate: {}".format(response))
+
+            prompts.append(response.choices[0].delta.content)
+
+        except Exception as e:
+            print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
+            print("image_generate: Error handling message: {}".format(e))
 
     prompts.append(prompt)
 
@@ -291,8 +302,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         # app.client.chat_delete(channel=channel, ts=latest_ts)
 
     except Exception as e:
-        print("image_generate: Error handling message: {}".format(e))
         print("image_generate: OpenAI Model: {}".format(IMAGE_MODEL))
+        print("image_generate: Error handling message: {}".format(e))
 
         message = f"```{e}```"
 
