@@ -283,7 +283,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
             print("image_generate: {}".format(response))
 
-            prompts.append(response.choices[0].delta.content)
+            prompts.append(response.choices[0].message.content)
 
         except Exception as e:
             print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
