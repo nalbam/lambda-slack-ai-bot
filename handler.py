@@ -162,6 +162,45 @@ def reply_image(prompt, channel, ts):
     return image_url
 
 
+# Get thread messages using conversations.replies API method
+def conversations_replies(channel, ts, client_msg_id, messages=[]):
+    response = app.client.conversations_replies(channel=channel, ts=ts)
+
+    print("conversations_replies: {}".format(response))
+
+    if not response.get("ok"):
+        print("Failed to retrieve thread messages.")
+
+    res_messages = response.get("messages", [])
+    res_messages.reverse()
+    res_messages.pop(0)  # remove the first message
+
+    for message in res_messages:
+        if message.get("client_msg_id", "") == client_msg_id:
+            continue
+
+        role = "user"
+        if message.get("bot_id", "") != "":
+            role = "assistant"
+
+        messages.append(
+            {
+                "role": role,
+                "content": message.get("text", ""),
+            }
+        )
+
+        # print("conversation: messages size: {}".format(sys.getsizeof(messages)))
+
+        if sys.getsizeof(messages) > MESSAGE_MAX:
+            messages.pop(0)  # remove the oldest message
+            break
+
+    messages.append(system_message)
+
+    return messages
+
+
 # Handle the chatgpt conversation
 def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     print("conversation: {}".format(json.dumps(content)))
@@ -179,44 +218,11 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     )
 
     if thread_ts != None:
-        # Get thread messages using conversations.replies API method
-        response = app.client.conversations_replies(channel=channel, ts=thread_ts)
+        messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
 
-        print("conversations_replies: {}".format(response))
-
-        if not response.get("ok"):
-            print("Failed to retrieve thread messages.")
-
-        res_messages = response.get("messages", [])
-        res_messages.reverse()
-        res_messages.pop(0)  # remove the first message
-
-        for message in res_messages:
-            if message.get("client_msg_id", "") == client_msg_id:
-                continue
-
-            role = "user"
-            if message.get("bot_id", "") != "":
-                role = "assistant"
-
-            messages.append(
-                {
-                    "role": role,
-                    "content": message.get("text", ""),
-                }
-            )
-
-            # print("conversation: messages size: {}".format(sys.getsizeof(messages)))
-
-            if sys.getsizeof(messages) > MESSAGE_MAX:
-                messages.pop(0)  # remove the oldest message
-                break
-
-    messages.append(system_message)
+    messages = messages[::-1]  # reversed
 
     try:
-        messages = messages[::-1]  # reversed
-
         print("conversation: {}".format(json.dumps(messages)))
 
         # Send the prompt to ChatGPT
@@ -234,32 +240,48 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
 
 # Handle the image generation
-def image_generate(say: Say, thread_ts, content, channel):
+def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     print("image_generate: {}".format(content))
 
     # Keep track of the latest message timestamp
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
+    prompts = []
+
     prompt = content[0]["text"]
 
-    content[0].update({"text": "사진을 보듯이 자세히 알려줘"})
+    if thread_ts != None:
+        replies = conversations_replies(channel, thread_ts, client_msg_id, [])
 
-    messages = []
-    messages.append(
-        {
-            "role": "user",
-            "content": content,
-        },
-    )
+        replies = replies[::-1]  # reversed
 
-    try:
+        contents = [f"{reply['role']}: {reply['content']}" for reply in replies]
+
+        prompts.append("\n\n\n".join(contents))
+
+    if len(content) > 1:
+        content[0]["text"] = "사진을 보듯이 자세히 설명해줘."
+
+        messages = []
+        messages.append(
+            {
+                "role": "user",
+                "content": content,
+            },
+        )
+
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
         )
 
-        prompt = prompt + "\n\n" + response.choices[0].message.content
+        prompts.append(response.choices[0].delta.content)
+
+    prompts.append(prompt)
+
+    try:
+        prompt = "\n\n\n".join(prompts)
 
         # Send the prompt to ChatGPT
         message = reply_image(prompt, channel, latest_ts)
@@ -364,7 +386,7 @@ def handle_mention(body: dict, say: Say):
     content, type = content_from_message(prompt, event)
 
     if type == "image":
-        image_generate(say, thread_ts, content, channel)
+        image_generate(say, thread_ts, content, channel, client_msg_id)
     else:
         conversation(say, thread_ts, content, channel, user, client_msg_id)
 
@@ -388,7 +410,7 @@ def handle_message(body: dict, say: Say):
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
-        image_generate(say, None, content, channel)
+        image_generate(say, None, content, channel, client_msg_id)
     else:
         conversation(say, None, content, channel, user, client_msg_id)
 
