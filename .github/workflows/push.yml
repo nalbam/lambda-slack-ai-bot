@@ -11,11 +11,12 @@ on:
 
 env:
   BOT_CURSOR: ${{ secrets.BOT_CURSOR }}
+  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+  SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+  DYNAMODB_TABLE_NAME: ${{ secrets.DYNAMODB_TABLE_NAME }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
   OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
-  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-  SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
   SYSTEM_MESSAGE: ${{ secrets.SYSTEM_MESSAGE }}
   TEMPERATURE: ${{ secrets.TEMPERATURE }}
 
@@ -49,11 +50,12 @@ jobs:
       - name: Set up environment variables 📝
         run: |
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
+          echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
+          echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
+          echo "DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME}" >> .env
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
           echo "OPENAI_ORG_ID=${OPENAI_ORG_ID}" >> .env
-          echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
-          echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
           echo "SYSTEM_MESSAGE=${SYSTEM_MESSAGE}" >> .env
           echo "TEMPERATURE=${TEMPERATURE}" >> .env
 
