@@ -224,9 +224,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     )
 
     if thread_ts != None:
-        messages = conversations_replies(
-            channel, thread_ts, client_msg_id, messages, 500
-        )
+        messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
 
     messages = messages[::-1]  # reversed
 
@@ -260,6 +258,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     prompt = content[0]["text"]
 
     if thread_ts != None:
+        chat_update(channel, latest_ts, "이전 대화 내용을 확인 중... " + BOT_CURSOR)
+
         replies = conversations_replies(channel, thread_ts, client_msg_id, [])
 
         replies = replies[::-1]  # reversed
@@ -269,6 +269,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         prompts.append("\n\n\n".join(contents))
 
     if len(content) > 1:
+        chat_update(channel, latest_ts, "이미지를 이해 중... " + BOT_CURSOR)
+
         content[0]["text"] = "사진을 보듯이 자세히 설명해줘."
 
         messages = []
@@ -293,11 +295,44 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
             print("image_generate: Error handling message: {}".format(e))
 
+    # Send the prompt to ChatGPT
     prompts.append(prompt)
+    prompt = "\n\n\n".join(prompts)
+
+    if len(content) > 1:
+        chat_update(channel, latest_ts, "이미지를 생성 준비 중... " + BOT_CURSOR)
+
+        content[0]["text"] = (
+            prompt
+            + "\n\n\n"
+            + "이 문장을 dall-e 가 알아들을 수 있도록 1000자 이내로 만들어줘."
+        )
+
+        messages = []
+        messages.append(
+            {
+                "role": "user",
+                "content": content,
+            },
+        )
+
+        try:
+            response = openai.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=messages,
+            )
+
+            print("image_generate: {}".format(response))
+
+            prompt = response.choices[0].message.content
+
+            chat_update(channel, latest_ts, prompt)
+
+        except Exception as e:
+            print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
+            print("image_generate: Error handling message: {}".format(e))
 
     try:
-        prompt = "\n\n\n".join(prompts)
-
         # Send the prompt to ChatGPT
         message = reply_image(prompt, channel, latest_ts)
 
