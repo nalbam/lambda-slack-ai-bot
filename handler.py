@@ -299,38 +299,37 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     prompts.append(prompt)
     prompt = "\n\n\n".join(prompts)
 
-    if len(content) > 1:
-        chat_update(channel, latest_ts, "이미지를 생성 준비 중... " + BOT_CURSOR)
+    chat_update(channel, latest_ts, "이미지를 생성 준비 중... " + BOT_CURSOR)
 
-        content[0]["text"] = (
-            prompt
-            + "\n\n\n"
-            + "이 문장을 dall-e 가 알아들을 수 있도록 1000자 이내로 만들어줘."
+    content[0]["text"] = (
+        prompt
+        + "\n\n\n"
+        + "이 문장을 dall-e 가 알아들을 수 있도록 1000자 이내로 만들어줘."
+    )
+
+    messages = []
+    messages.append(
+        {
+            "role": "user",
+            "content": content,
+        },
+    )
+
+    try:
+        response = openai.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=messages,
         )
 
-        messages = []
-        messages.append(
-            {
-                "role": "user",
-                "content": content,
-            },
-        )
+        print("image_generate: {}".format(response))
 
-        try:
-            response = openai.chat.completions.create(
-                model=OPENAI_MODEL,
-                messages=messages,
-            )
+        prompt = response.choices[0].message.content
 
-            print("image_generate: {}".format(response))
+        chat_update(channel, latest_ts, prompt)
 
-            prompt = response.choices[0].message.content
-
-            chat_update(channel, latest_ts, prompt)
-
-        except Exception as e:
-            print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
-            print("image_generate: Error handling message: {}".format(e))
+    except Exception as e:
+        print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
+        print("image_generate: Error handling message: {}".format(e))
 
     try:
         # Send the prompt to ChatGPT
