@@ -325,7 +325,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
         prompt = response.choices[0].message.content
 
-        chat_update(channel, latest_ts, prompt)
+        chat_update(channel, latest_ts, prompt + " " + BOT_CURSOR)
 
     except Exception as e:
         print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
