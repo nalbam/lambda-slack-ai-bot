@@ -163,7 +163,9 @@ def reply_image(prompt, channel, ts):
 
 
 # Get thread messages using conversations.replies API method
-def conversations_replies(channel, ts, client_msg_id, messages=[]):
+def conversations_replies(
+    channel, ts, client_msg_id, messages=[], message_max=MESSAGE_MAX
+):
     try:
         response = app.client.conversations_replies(channel=channel, ts=ts)
 
@@ -193,7 +195,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[]):
 
             # print("conversations_replies: messages size: {}".format(sys.getsizeof(messages)))
 
-            if sys.getsizeof(messages) > MESSAGE_MAX:
+            if sys.getsizeof(messages) > message_max:
                 messages.pop(0)  # remove the oldest message
                 break
 
@@ -222,7 +224,9 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     )
 
     if thread_ts != None:
-        messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
+        messages = conversations_replies(
+            channel, thread_ts, client_msg_id, messages, 500
+        )
 
     messages = messages[::-1]  # reversed
 
