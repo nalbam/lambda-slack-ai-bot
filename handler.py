@@ -229,7 +229,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     messages = messages[::-1]  # reversed
 
     try:
-        print("conversation: {}".format(json.dumps(messages)))
+        print("conversation: {}".format(messages))
 
         # Send the prompt to ChatGPT
         message = reply_text(messages, channel, latest_ts, user)
@@ -258,7 +258,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     prompt = content[0]["text"]
 
     if thread_ts != None:
-        chat_update(channel, latest_ts, "이전 대화 내용을 확인 중... " + BOT_CURSOR)
+        chat_update(channel, latest_ts, "이전 대화 내용 확인 중... " + BOT_CURSOR)
 
         replies = conversations_replies(channel, thread_ts, client_msg_id, [])
 
@@ -269,7 +269,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         prompts.append("\n\n\n".join(contents))
 
     if len(content) > 1:
-        chat_update(channel, latest_ts, "이미지를 이해 중... " + BOT_CURSOR)
+        chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
 
         content[0]["text"] = "사진을 보듯이 자세히 설명해줘."
 
@@ -282,6 +282,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         )
 
         try:
+            print("image_generate: {}".format(messages))
+
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=messages,
@@ -299,7 +301,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     prompts.append(prompt)
     prompt = "\n\n\n".join(prompts)
 
-    chat_update(channel, latest_ts, "이미지를 생성 준비 중... " + BOT_CURSOR)
+    chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
 
     content[0]["text"] = (
         prompt
@@ -316,6 +318,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     )
 
     try:
+        print("image_generate: {}".format(messages))
+
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
@@ -332,6 +336,8 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         print("image_generate: Error handling message: {}".format(e))
 
     try:
+        print("image_generate: {}".format(prompt))
+
         # Send the prompt to ChatGPT
         message = reply_image(prompt, channel, latest_ts)
 
