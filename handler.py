@@ -271,7 +271,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     if len(content) > 1:
         chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
 
-        content[0]["text"] = "사진을 보듯이 자세히 설명해줘."
+        content[0]["text"] = "Describe it in detail as if you were looking at a picture."
 
         messages = []
         messages.append(
@@ -306,7 +306,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     content[0]["text"] = (
         prompt
         + "\n\n\n"
-        + "이 문장을 dall-e 가 알아들을 수 있도록 1000자 이내로 만들어줘."
+        + "Make this sentence 1000 characters or less so that dall-e can understand it."
     )
 
     messages = []
