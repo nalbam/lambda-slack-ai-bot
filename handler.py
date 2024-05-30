@@ -58,16 +58,6 @@ openai = OpenAI(
     api_key=OPENAI_API_KEY,
 )
 
-# OpenAI system message
-system_message = (
-    {
-        "role": "system",
-        "content": SYSTEM_MESSAGE,
-    }
-    if SYSTEM_MESSAGE != "None"
-    else {}
-)
-
 
 # Get the context from DynamoDB
 def get_context(thread_ts, user, default=""):
@@ -208,8 +198,13 @@ def conversations_replies(
     except Exception as e:
         print("conversations_replies: {}".format(e))
 
-    if len(messages) > 0:
-        messages.append(system_message)
+    if SYSTEM_MESSAGE != "None":
+        messages.append(
+            {
+                "role": "system",
+                "content": SYSTEM_MESSAGE,
+            }
+        )
 
     return messages
 
