@@ -33,7 +33,7 @@ IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
 IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid")  # vivid, natural
 
 # Set up System messages
-SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "")
+SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
@@ -59,10 +59,14 @@ openai = OpenAI(
 )
 
 # OpenAI system message
-system_message = {
-    "role": "system",
-    "content": SYSTEM_MESSAGE,
-}
+system_message = (
+    {
+        "role": "system",
+        "content": SYSTEM_MESSAGE,
+    }
+    if SYSTEM_MESSAGE != "None"
+    else {}
+)
 
 
 # Get the context from DynamoDB
@@ -204,7 +208,8 @@ def conversations_replies(
     except Exception as e:
         print("conversations_replies: {}".format(e))
 
-    messages.append(system_message)
+    if len(messages) > 0:
+        messages.append(system_message)
 
     return messages
 
