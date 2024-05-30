@@ -293,7 +293,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=messages,
-                temperature=TEMPERATURE,
+                # temperature=TEMPERATURE,
             )
 
             print("image_generate: {}".format(response))
@@ -333,7 +333,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
-            temperature=TEMPERATURE,
+            # temperature=TEMPERATURE,
         )
 
         print("image_generate: {}".format(response))
