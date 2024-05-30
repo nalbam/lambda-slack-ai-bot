@@ -225,11 +225,15 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         },
     )
 
+    # Get the thread messages
     if thread_ts != None:
+        chat_update(channel, latest_ts, "이전 대화 내용 확인 중... " + BOT_CURSOR)
+
         messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
 
-    messages = messages[::-1]  # reversed
+        messages = messages[::-1]  # reversed
 
+    # Send the prompt to ChatGPT
     try:
         print("conversation: {}".format(messages))
 
