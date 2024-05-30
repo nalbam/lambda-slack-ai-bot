@@ -29,7 +29,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
 IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
-IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "standard")
+IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "hd")
 
 # Set up System messages
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "")
