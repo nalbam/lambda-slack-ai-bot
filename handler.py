@@ -23,8 +23,8 @@ SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "slack-ai-bot-context")
 
 # Set up ChatGPT API credentials
-OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
@@ -53,7 +53,7 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 # Initialize OpenAI
 openai = OpenAI(
-    organization=OPENAI_ORG_ID,
+    organization=OPENAI_ORG_ID if OPENAI_ORG_ID != "None" else None,
     api_key=OPENAI_API_KEY,
 )
 
@@ -271,7 +271,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     if len(content) > 1:
         chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
 
-        content[0]["text"] = "Describe it in detail as if you were looking at a picture."
+        content[0]["text"] = "Describe this image in detail."
 
         messages = []
         messages.append(
