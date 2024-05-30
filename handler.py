@@ -273,7 +273,11 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
         replies = replies[::-1]  # reversed
 
-        prompts = [f"{reply['role']}: {reply['content']}" for reply in replies]
+        prompts = [
+            f"{reply['role']}: {reply['content']}"
+            for reply in replies
+            if reply["content"].strip()
+        ]
 
     # Get the image content
     if len(content) > 1:
