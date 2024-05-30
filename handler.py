@@ -308,7 +308,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     content[0]["text"] = (
         prompt
         + "\n\n\n"
-        + "Reduce this description to 1000 characters so DALL-E can generate an image."
+        + "Create a command for DALL-E to generate an image."
     )
 
     messages = []
