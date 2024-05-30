@@ -255,10 +255,11 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     result = say(text=BOT_CURSOR, thread_ts=thread_ts)
     latest_ts = result["ts"]
 
-    prompts = []
-
     prompt = content[0]["text"]
 
+    prompts = []
+
+    # Get the thread messages
     if thread_ts != None:
         chat_update(channel, latest_ts, "이전 대화 내용 확인 중... " + BOT_CURSOR)
 
@@ -266,10 +267,9 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
         replies = replies[::-1]  # reversed
 
-        contents = [f"{reply['role']}: {reply['content']}" for reply in replies]
+        prompts = [f"{reply['role']}: {reply['content']}" for reply in replies]
 
-        prompts.append("\n\n\n".join(contents))
-
+    # Get the image content
     if len(content) > 1:
         chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
 
@@ -289,6 +289,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=messages,
+                temperature=TEMPERATURE,
             )
 
             print("image_generate: {}".format(response))
@@ -301,30 +302,34 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Send the prompt to ChatGPT
     prompts.append(prompt)
-    prompt = "\n\n\n".join(prompts)
 
-    chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
-
-    content[0]["text"] = (
-        prompt
-        + "\n\n\n"
-        + "Convert the above sentence into a command for DALL-E to generate an image."
-    )
-
-    messages = []
-    messages.append(
-        {
-            "role": "user",
-            "content": content,
-        },
-    )
-
+    # Prepare the prompt for image generation
     try:
+        chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
+
+        prompts.append(
+            "Convert the above sentence into a command for DALL-E to generate an image."
+        )
+
+        messages = []
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "\n\n\n".join(prompts),
+                    }
+                ],
+            },
+        )
+
         print("image_generate: {}".format(messages))
 
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
+            temperature=TEMPERATURE,
         )
 
         print("image_generate: {}".format(response))
@@ -337,6 +342,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
         print("image_generate: Error handling message: {}".format(e))
 
+    # Generate the image
     try:
         print("image_generate: {}".format(prompt))
 
