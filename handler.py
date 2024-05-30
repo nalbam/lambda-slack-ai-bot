@@ -267,7 +267,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Get the thread messages
     if thread_ts != None:
-        chat_update(channel, latest_ts, "이전 대화 내용 확인 중... " + BOT_CURSOR)
+        chat_update(channel, latest_ts, "이전 대화 확인 중... " + BOT_CURSOR)
 
         replies = conversations_replies(channel, thread_ts, client_msg_id, [])
 
@@ -281,7 +281,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Get the image content
     if len(content) > 1:
-        chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
+        chat_update(channel, latest_ts, "이미지 감상 중... " + BOT_CURSOR)
 
         content[0]["text"] = "Describe the image in great detail as if viewing a photo."
 
