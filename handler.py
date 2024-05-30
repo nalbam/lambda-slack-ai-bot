@@ -303,7 +303,11 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
 
-    content[0]["text"] = prompt + "\n\n\n" + "Please shorten this to 1000 characters."
+    content[0]["text"] = (
+        prompt
+        + "\n\n\n"
+        + "Reduce this description to 1000 characters so DALL-E can generate an image."
+    )
 
     messages = []
     messages.append(
