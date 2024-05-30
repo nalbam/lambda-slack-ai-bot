@@ -277,7 +277,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     if len(content) > 1:
         chat_update(channel, latest_ts, "이미지 이해 중... " + BOT_CURSOR)
 
-        content[0]["text"] = "Describe this image in detail."
+        content[0]["text"] = "Describe the image in great detail as if viewing a photo."
 
         messages = []
         messages.append(
@@ -312,7 +312,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
 
         prompts.append(
-            "Convert the above sentence into a command for DALL-E to generate an image."
+            "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters."
         )
 
         messages = []
