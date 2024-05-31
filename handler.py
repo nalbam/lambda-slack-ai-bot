@@ -296,21 +296,21 @@ def image_generate(say: Say, thread_ts, content, channel, user, client_msg_id):
         try:
             print("image_generate: {}".format(messages))
 
-            # response = openai.chat.completions.create(
-            #     model=OPENAI_MODEL,
-            #     messages=messages,
-            #     # temperature=TEMPERATURE,
-            # )
+            response = openai.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=messages,
+                # temperature=TEMPERATURE,
+            )
 
-            # print("image_generate: {}".format(response))
+            print("image_generate: {}".format(response))
 
-            # prompts.append(response.choices[0].message.content)
+            prompts.append(response.choices[0].message.content)
 
-            content = reply_text(messages, channel, latest_ts, user)
+            # content = reply_text(messages, channel, latest_ts, user)
 
-            print("image_generate: {}".format(content))
+            # print("image_generate: {}".format(content))
 
-            prompts.append(content)
+            # prompts.append(content)
 
         except Exception as e:
             print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
@@ -342,21 +342,21 @@ def image_generate(say: Say, thread_ts, content, channel, user, client_msg_id):
 
         print("image_generate: {}".format(messages))
 
-        # response = openai.chat.completions.create(
-        #     model=OPENAI_MODEL,
-        #     messages=messages,
-        #     # temperature=TEMPERATURE,
-        # )
+        response = openai.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=messages,
+            # temperature=TEMPERATURE,
+        )
 
-        # print("image_generate: {}".format(response))
+        print("image_generate: {}".format(response))
 
-        # prompt = response.choices[0].message.content
+        prompt = response.choices[0].message.content
 
-        content = reply_text(messages, channel, latest_ts, user)
+        # content = reply_text(messages, channel, latest_ts, user)
 
-        print("image_generate: {}".format(content))
+        # print("image_generate: {}".format(content))
 
-        prompt = content
+        # prompt = content
 
         chat_update(channel, latest_ts, prompt + " " + BOT_CURSOR)
 
