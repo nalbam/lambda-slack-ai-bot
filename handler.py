@@ -103,7 +103,7 @@ def reply_text(messages, channel, ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
-        # temperature=TEMPERATURE,
+        temperature=TEMPERATURE,
         stream=True,
         user=user,
     )
@@ -254,7 +254,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
 
 # Handle the image generation
-def image_generate(say: Say, thread_ts, content, channel, user, client_msg_id):
+def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     print("image_generate: {}".format(content))
 
     # Keep track of the latest message timestamp
@@ -306,12 +306,6 @@ def image_generate(say: Say, thread_ts, content, channel, user, client_msg_id):
 
             prompts.append(response.choices[0].message.content)
 
-            # content = reply_text(messages, channel, latest_ts, user)
-
-            # print("image_generate: {}".format(content))
-
-            # prompts.append(content)
-
         except Exception as e:
             print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
             print("image_generate: Error handling message: {}".format(e))
@@ -351,12 +345,6 @@ def image_generate(say: Say, thread_ts, content, channel, user, client_msg_id):
         print("image_generate: {}".format(response))
 
         prompt = response.choices[0].message.content
-
-        # content = reply_text(messages, channel, latest_ts, user)
-
-        # print("image_generate: {}".format(content))
-
-        # prompt = content
 
         chat_update(channel, latest_ts, prompt + " " + BOT_CURSOR)
 
@@ -471,7 +459,7 @@ def handle_mention(body: dict, say: Say):
     content, type = content_from_message(prompt, event)
 
     if type == "image":
-        image_generate(say, thread_ts, content, channel, user, client_msg_id)
+        image_generate(say, thread_ts, content, channel, client_msg_id)
     else:
         conversation(say, thread_ts, content, channel, user, client_msg_id)
 
@@ -495,7 +483,7 @@ def handle_message(body: dict, say: Say):
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
-        image_generate(say, None, content, channel, user, client_msg_id)
+        image_generate(say, None, content, channel, client_msg_id)
     else:
         conversation(say, None, content, channel, user, client_msg_id)
 
