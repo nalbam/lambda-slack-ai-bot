@@ -471,7 +471,7 @@ def handle_mention(body: dict, say: Say):
     content, type = content_from_message(prompt, event)
 
     if type == "image":
-        image_generate(say, thread_ts, content, channel, client_msg_id)
+        image_generate(say, thread_ts, content, channel, user, client_msg_id)
     else:
         conversation(say, thread_ts, content, channel, user, client_msg_id)
 
