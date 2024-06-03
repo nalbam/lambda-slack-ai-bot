@@ -506,7 +506,7 @@ def lambda_handler(event, context):
 
     # Duplicate execution prevention
     if "event" not in body or "client_msg_id" not in body["event"]:
-        print("handle_mention: {}".format("Cannot find the event or client_msg_id"))
+        print("lambda_handler: {}".format("Cannot find the event or client_msg_id"))
         return {
             "statusCode": 200,
             "headers": {"Content-type": "application/json"},
@@ -518,7 +518,7 @@ def lambda_handler(event, context):
     prompt = get_context(token, body["event"]["user"])
 
     if prompt != "":
-        print("handle_mention: {}".format("Cannot find the prompt"))
+        print("lambda_handler: {}".format("Cannot find the prompt"))
         return {
             "statusCode": 200,
             "headers": {"Content-type": "application/json"},
