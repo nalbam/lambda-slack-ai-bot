@@ -168,7 +168,7 @@ def conversations_replies(
         print("conversations_replies: {}".format(response))
 
         if not response.get("ok"):
-            print("Failed to retrieve thread messages.")
+            print("conversations_replies: {}".format("Failed to retrieve thread messages."))
 
         res_messages = response.get("messages", [])
         res_messages.reverse()
@@ -448,6 +448,7 @@ def handle_mention(body: dict, say: Say):
     event = body["event"]
 
     if "bot_id" in event:  # Ignore messages from the bot itself
+        print("handle_mention: {}".format("Ignore messages from the bot itself"))
         return
 
     thread_ts = event["thread_ts"] if "thread_ts" in event else event["ts"]
@@ -472,6 +473,7 @@ def handle_message(body: dict, say: Say):
     event = body["event"]
 
     if "bot_id" in event:  # Ignore messages from the bot itself
+        print("handle_mention: {}".format("Ignore messages from the bot itself"))
         return
 
     prompt = event["text"].strip()
@@ -504,6 +506,7 @@ def lambda_handler(event, context):
 
     # Duplicate execution prevention
     if "event" not in body or "client_msg_id" not in body["event"]:
+        print("handle_mention: {}".format("Cannot find the event or client_msg_id"))
         return {
             "statusCode": 200,
             "headers": {"Content-type": "application/json"},
@@ -515,6 +518,7 @@ def lambda_handler(event, context):
     prompt = get_context(token, body["event"]["user"])
 
     if prompt != "":
+        print("handle_mention: {}".format("Cannot find the prompt"))
         return {
             "statusCode": 200,
             "headers": {"Content-type": "application/json"},
