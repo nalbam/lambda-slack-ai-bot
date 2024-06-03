@@ -143,7 +143,7 @@ def reply_image(prompt, channel, ts):
     image_url = response.data[0].url
 
     file_ext = image_url.split(".")[-1].split("?")[0]
-    filename = "{}.{}".format(IMAGE_MODEL, file_ext)
+    filename = "{}-{}-{}.{}".format(IMAGE_MODEL, IMAGE_QUALITY, IMAGE_SIZE, file_ext)
 
     file = get_image_from_url(image_url)
 
@@ -168,7 +168,11 @@ def conversations_replies(
         print("conversations_replies: {}".format(response))
 
         if not response.get("ok"):
-            print("conversations_replies: {}".format("Failed to retrieve thread messages."))
+            print(
+                "conversations_replies: {}".format(
+                    "Failed to retrieve thread messages."
+                )
+            )
 
         res_messages = response.get("messages", [])
         res_messages.reverse()
