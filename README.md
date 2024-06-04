@@ -42,6 +42,9 @@ $ cp .env.example .env
 ```bash
 SLACK_BOT_TOKEN="xoxb-xxxx"
 SLACK_SIGNING_SECRET="xxxx"
+
+OPENAI_ORG_ID="org-xxxx"
+OPENAI_API_KEY="sk-xxxx"
 ```
 
 ### OpenAi API
