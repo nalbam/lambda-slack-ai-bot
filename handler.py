@@ -48,6 +48,8 @@ app = App(
 
 bot_id = app.client.api_call("auth.test")["user_id"]
 
+handler = SlackRequestHandler(app=app)
+
 # Initialize DynamoDB
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
@@ -508,30 +510,29 @@ def lambda_handler(event, context):
 
     print("lambda_handler: {}".format(body))
 
-    # Duplicate execution prevention
-    if "event" not in body or "client_msg_id" not in body["event"]:
-        # print("lambda_handler: {}".format("Cannot find the event or client_msg_id"))
-        return {
-            "statusCode": 200,
-            "headers": {"Content-type": "application/json"},
-            "body": json.dumps({"status": "Success"}),
-        }
+    # # Duplicate execution prevention
+    # if "event" not in body or "client_msg_id" not in body["event"]:
+    #     # print("lambda_handler: {}".format("Cannot find the event or client_msg_id"))
+    #     return {
+    #         "statusCode": 200,
+    #         "headers": {"Content-type": "application/json"},
+    #         "body": json.dumps({"status": "Success"}),
+    #     }
 
-    # Get the context from DynamoDB
-    token = body["event"]["client_msg_id"]
-    prompt = get_context(token, body["event"]["user"])
+    # # Get the context from DynamoDB
+    # token = body["event"]["client_msg_id"]
+    # prompt = get_context(token, body["event"]["user"])
 
-    if prompt != "":
-        # print("lambda_handler: {}".format("Cannot find the prompt"))
-        return {
-            "statusCode": 200,
-            "headers": {"Content-type": "application/json"},
-            "body": json.dumps({"status": "Success"}),
-        }
+    # if prompt != "":
+    #     # print("lambda_handler: {}".format("Cannot find the prompt"))
+    #     return {
+    #         "statusCode": 200,
+    #         "headers": {"Content-type": "application/json"},
+    #         "body": json.dumps({"status": "Success"}),
+    #     }
 
-    # Put the context in DynamoDB
-    put_context(token, body["event"]["user"], body["event"]["text"])
+    # # Put the context in DynamoDB
+    # put_context(token, body["event"]["user"], body["event"]["text"])
 
     # Handle the event
-    slack_handler = SlackRequestHandler(app=app)
-    return slack_handler.handle(event, context)
+    return handler.handle(event, context)
