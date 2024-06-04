@@ -21,14 +21,21 @@ Set scopes to Bot Token Scopes in OAuth & Permission:
 
 ```
 app_mentions:read
+channels:history
 channels:join
+channels:read
 chat:write
+files:read
+files:write
+im:read
+im:write
 ```
 
 Set scopes in Event Subscriptions - Subscribe to bot events
 
 ```
 app_mention
+message.im
 ```
 
 ## Credentials
