@@ -97,7 +97,10 @@ def put_context(thread_ts, user, conversation=""):
 # Update the message in Slack
 def chat_update(channel, ts, message, blocks=None):
     # print("chat_update: {}".format(message))
-    app.client.chat_update(channel=channel, ts=ts, text=message, blocks=blocks)
+
+    text = message.replace("**", "*")
+
+    app.client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
 
 
 # Reply to the message
