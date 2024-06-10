@@ -37,7 +37,11 @@ SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
-MESSAGE_MAX = int(os.environ.get("MESSAGE_MAX", 4000))
+MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 10000))
+MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
+
+COMMAND_DESCRIBE = "Describe the image in great detail as if viewing a photo."
+COMMAND_GENERATE = "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters. Just give me a prompt."
 
 # Initialize Slack app
 app = App(
@@ -102,6 +106,8 @@ def chat_update(channel, ts, message, blocks=None):
 
     app.client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
 
+    return message, ts
+
 
 # Reply to the message
 def reply_text(messages, channel, ts, user):
@@ -165,7 +171,7 @@ def reply_image(prompt, channel, ts):
 
 # Get thread messages using conversations.replies API method
 def conversations_replies(
-    channel, ts, client_msg_id, messages=[], message_max=MESSAGE_MAX
+    channel, ts, client_msg_id, messages=[], MAX_LEN_OPENAI=MAX_LEN_OPENAI
 ):
     try:
         response = app.client.conversations_replies(channel=channel, ts=ts)
@@ -200,7 +206,7 @@ def conversations_replies(
 
             # print("conversations_replies: messages size: {}".format(sys.getsizeof(messages)))
 
-            if sys.getsizeof(messages) > message_max:
+            if sys.getsizeof(messages) > MAX_LEN_OPENAI:
                 messages.pop(0)  # remove the oldest message
                 break
 
@@ -292,7 +298,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     if len(content) > 1:
         chat_update(channel, latest_ts, "이미지 감상 중... " + BOT_CURSOR)
 
-        content[0]["text"] = "Describe the image in great detail as if viewing a photo."
+        content[0]["text"] = COMMAND_DESCRIBE
 
         messages = []
         messages.append(
@@ -326,9 +332,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     try:
         chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
 
-        prompts.append(
-            "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters. Just give me a prompt."
-        )
+        prompts.append(COMMAND_GENERATE)
 
         messages = []
         messages.append(
