@@ -37,7 +37,7 @@ SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
-MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 1000))
+MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 2000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
@@ -126,15 +126,15 @@ def chat_update(say, channel, thread_ts, latest_ts, message="", continue_thread=
             text = split_key.join(parts) + split_key
             message = last_one
 
-        if continue_thread:
-            text = text.replace("**", "*") + " " + BOT_CURSOR
-        else:
-            text = text.replace("**", "*")
+        text = text.replace("**", "*")
 
         # Update the message
         app.client.chat_update(channel=channel, ts=latest_ts, text=text)
 
-        text = message.replace("**", "*") + " " + BOT_CURSOR
+        if continue_thread:
+            text = text.replace("**", "*") + " " + BOT_CURSOR
+        else:
+            text = text.replace("**", "*")
 
         # New message
         result = say(text=text, thread_ts=thread_ts)
