@@ -37,7 +37,7 @@ SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
-MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 5000))
+MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 1000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
