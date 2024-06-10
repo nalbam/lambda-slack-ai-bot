@@ -37,7 +37,7 @@ SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 
-MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 10000))
+MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 5000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
@@ -107,7 +107,7 @@ def put_context(thread_ts, user, conversation=""):
 
 
 # Update the message in Slack
-def chat_update(say, channel, thread_ts, latest_ts, message=""):
+def chat_update(say, channel, thread_ts, latest_ts, message="", continue_thread=False):
     # print("chat_update: {}".format(message))
 
     if sys.getsizeof(message) > MAX_LEN_SLACK:
@@ -126,16 +126,27 @@ def chat_update(say, channel, thread_ts, latest_ts, message=""):
             text = split_key.join(parts) + split_key
             message = last_one
 
-        app.client.chat_update(
-            channel=channel, ts=latest_ts, text=text.replace("**", "*")
-        )
+        if continue_thread:
+            text = text.replace("**", "*") + " " + BOT_CURSOR
+        else:
+            text = text.replace("**", "*")
 
-        result = say(text=BOT_CURSOR, thread_ts=thread_ts)
+        # Update the message
+        app.client.chat_update(channel=channel, ts=latest_ts, text=text)
+
+        text = message.replace("**", "*") + " " + BOT_CURSOR
+
+        # New message
+        result = say(text=text, thread_ts=thread_ts)
         latest_ts = result["ts"]
     else:
-        app.client.chat_update(
-            channel=channel, ts=latest_ts, text=message.replace("**", "*")
-        )
+        if continue_thread:
+            text = message.replace("**", "*") + " " + BOT_CURSOR
+        else:
+            text = message.replace("**", "*")
+
+        # Update the message
+        app.client.chat_update(channel=channel, ts=latest_ts, text=text)
 
     return message, latest_ts
 
@@ -159,9 +170,9 @@ def reply_text(messages, say, channel, thread_ts, latest_ts, user):
             message += reply
 
         if counter % 16 == 1:
-            text = (message + " " + BOT_CURSOR).replace("**", "*")
-
-            message, latest_ts = chat_update(say, channel, thread_ts, latest_ts, text)
+            message, latest_ts = chat_update(
+                say, channel, thread_ts, latest_ts, message, True
+            )
 
         counter = counter + 1
 
