@@ -40,6 +40,14 @@ TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 10000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
+KEYWARD_IMAGE = "그려줘"
+
+MSG_PREVIOUS = "이전 대화 내용 확인 중... " + BOT_CURSOR
+MSG_IMAGE_DESCRIBE = "이미지 감상 중... " + BOT_CURSOR
+MSG_IMAGE_GENERATE = "이미지 생성 준비 중... " + BOT_CURSOR
+MSG_IMAGE_DRAW = "이미지 그리는 중... " + BOT_CURSOR
+MSG_RESPONSE = "응답 기다리는 중... " + BOT_CURSOR
+
 COMMAND_DESCRIBE = "Describe the image in great detail as if viewing a photo."
 COMMAND_GENERATE = "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters. Just give me a prompt."
 
@@ -99,18 +107,41 @@ def put_context(thread_ts, user, conversation=""):
 
 
 # Update the message in Slack
-def chat_update(channel, ts, message, blocks=None):
+def chat_update(say, channel, thread_ts, latest_ts, message=""):
     # print("chat_update: {}".format(message))
 
-    text = message.replace("**", "*")
+    if sys.getsizeof(message) > MAX_LEN_SLACK:
+        split_key = "\n\n"
+        if "```" in message:
+            split_key = "```"
 
-    app.client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
+        parts = message.split(split_key)
 
-    return message, ts
+        last_one = parts.pop()
+
+        if len(parts) % 2 == 0:
+            text = split_key.join(parts)
+            message = split_key + last_one
+        else:
+            text = split_key.join(parts) + split_key
+            message = last_one
+
+        app.client.chat_update(
+            channel=channel, ts=latest_ts, text=text.replace("**", "*")
+        )
+
+        result = say(text=BOT_CURSOR, thread_ts=thread_ts)
+        latest_ts = result["ts"]
+    else:
+        app.client.chat_update(
+            channel=channel, ts=latest_ts, text=message.replace("**", "*")
+        )
+
+    return message, latest_ts
 
 
 # Reply to the message
-def reply_text(messages, channel, ts, user):
+def reply_text(messages, say, channel, thread_ts, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
@@ -128,17 +159,19 @@ def reply_text(messages, channel, ts, user):
             message += reply
 
         if counter % 16 == 1:
-            chat_update(channel, ts, message + " " + BOT_CURSOR)
+            text = (message + " " + BOT_CURSOR).replace("**", "*")
+
+            message, latest_ts = chat_update(say, channel, thread_ts, latest_ts, text)
 
         counter = counter + 1
 
-    chat_update(channel, ts, message)
+    chat_update(say, channel, thread_ts, latest_ts, message)
 
     return message
 
 
 # Reply to the image
-def reply_image(prompt, channel, ts):
+def reply_image(prompt, say, channel, thread_ts, latest_ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
@@ -159,12 +192,12 @@ def reply_image(prompt, channel, ts):
     file = get_image_from_url(image_url)
 
     response = app.client.files_upload_v2(
-        channel=channel, filename=filename, file=file, thread_ts=ts
+        channel=channel, filename=filename, file=file, thread_ts=thread_ts
     )
 
     print("reply_image: {}".format(response))
 
-    chat_update(channel, ts, revised_prompt)
+    chat_update(say, channel, thread_ts, latest_ts, revised_prompt)
 
     return image_url
 
@@ -244,7 +277,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
     # Get the thread messages
     if thread_ts != None:
-        chat_update(channel, latest_ts, "이전 대화 내용 확인 중... " + BOT_CURSOR)
+        chat_update(say, channel, thread_ts, latest_ts, MSG_PREVIOUS)
 
         messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
 
@@ -255,7 +288,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
         print("conversation: {}".format(messages))
 
         # Send the prompt to ChatGPT
-        message = reply_text(messages, channel, latest_ts, user)
+        message = reply_text(messages, say, channel, thread_ts, latest_ts, user)
 
         print("conversation: {}".format(message))
 
@@ -265,7 +298,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
         message = f"```{e}```"
 
-        chat_update(channel, latest_ts, message)
+        chat_update(say, channel, thread_ts, latest_ts, message)
 
 
 # Handle the image generation
@@ -282,7 +315,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Get the thread messages
     if thread_ts != None:
-        chat_update(channel, latest_ts, "이전 대화 확인 중... " + BOT_CURSOR)
+        chat_update(say, channel, thread_ts, latest_ts, MSG_PREVIOUS)
 
         replies = conversations_replies(channel, thread_ts, client_msg_id, [])
 
@@ -296,7 +329,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Get the image content
     if len(content) > 1:
-        chat_update(channel, latest_ts, "이미지 감상 중... " + BOT_CURSOR)
+        chat_update(say, channel, thread_ts, latest_ts, MSG_IMAGE_DESCRIBE)
 
         content[0]["text"] = COMMAND_DESCRIBE
 
@@ -330,7 +363,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
     # Prepare the prompt for image generation
     try:
-        chat_update(channel, latest_ts, "이미지 생성 준비 중... " + BOT_CURSOR)
+        chat_update(say, channel, thread_ts, latest_ts, MSG_IMAGE_GENERATE)
 
         prompts.append(COMMAND_GENERATE)
 
@@ -359,7 +392,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
         prompt = response.choices[0].message.content
 
-        chat_update(channel, latest_ts, prompt + " " + BOT_CURSOR)
+        chat_update(say, channel, thread_ts, latest_ts, prompt + " " + BOT_CURSOR)
 
     except Exception as e:
         print("image_generate: OpenAI Model: {}".format(OPENAI_MODEL))
@@ -370,7 +403,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         print("image_generate: {}".format(prompt))
 
         # Send the prompt to ChatGPT
-        message = reply_image(prompt, channel, latest_ts)
+        message = reply_image(prompt, say, channel, thread_ts, latest_ts)
 
         print("image_generate: {}".format(message))
 
@@ -382,7 +415,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
 
         message = f"```{e}```"
 
-        chat_update(channel, latest_ts, message)
+        chat_update(say, channel, thread_ts, latest_ts, message)
 
 
 # Get image from URL
@@ -420,14 +453,8 @@ def get_encoded_image_from_slack(image_url):
 def content_from_message(prompt, event):
     type = "text"
 
-    if "그려줘" in prompt:
+    if KEYWARD_IMAGE in prompt:
         type = "image"
-    # elif "!이미지" in prompt:
-    #     prompt = re.sub(f"!이미지", "", prompt).strip()
-    #     type = "image"
-    # elif "!image" in prompt:
-    #     prompt = re.sub(f"!image", "", prompt).strip()
-    #     type = "image"
 
     content = []
     content.append({"type": "text", "text": prompt})
