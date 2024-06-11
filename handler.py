@@ -51,7 +51,13 @@ MSG_RESPONSE = "응답 기다리는 중... " + BOT_CURSOR
 COMMAND_DESCRIBE = "Describe the image in great detail as if viewing a photo."
 COMMAND_GENERATE = "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters. Just give me a prompt."
 
-CONVERSION_ARRAY = [["**", "*"], ["#### ", "🔸 "], ["### ", "🔶 "]]
+CONVERSION_ARRAY = [
+    ["**", "*"],
+    ["#### ", "🔸 "],
+    ["### ", "🔶 "],
+    ["## ", "🟠 "],
+    ["# ", "🟡 "],
+]
 
 
 # Initialize Slack app
