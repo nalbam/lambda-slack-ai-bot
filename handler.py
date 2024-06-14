@@ -53,10 +53,10 @@ COMMAND_GENERATE = "Convert the above sentence into a command for DALL-E to gene
 
 CONVERSION_ARRAY = [
     ["**", "*"],
-    ["#### ", "🔸 "],
-    ["### ", "🔶 "],
-    ["## ", "🟠 "],
-    ["# ", "🟡 "],
+    # ["#### ", "🔸 "],
+    # ["### ", "🔶 "],
+    # ["## ", "🟠 "],
+    # ["# ", "🟡 "],
 ]
 
 
@@ -136,11 +136,11 @@ def chat_update(say, channel, thread_ts, latest_ts, message="", continue_thread=
         last_one = parts.pop()
 
         if len(parts) % 2 == 0:
-            text = split_key.join(parts)
-            message = split_key + last_one
-        else:
             text = split_key.join(parts) + split_key
             message = last_one
+        else:
+            text = split_key.join(parts)
+            message = split_key + last_one
 
         text = replace_text(text)
 
