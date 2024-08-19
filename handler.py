@@ -20,7 +20,7 @@ SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
 # Keep track of conversation history by thread and user
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "slack-ai-bot-context")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-bot-context")
 
 # Set up ChatGPT API credentials
 OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)
@@ -543,6 +543,7 @@ def handle_message(body: dict, say: Say):
         # Ignore messages from the bot itself
         return
 
+    thread_ts = None
     prompt = event["text"].strip()
     channel = event["channel"]
     user = event["user"]
@@ -552,9 +553,9 @@ def handle_message(body: dict, say: Say):
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
-        image_generate(say, None, content, channel, client_msg_id)
+        image_generate(say, thread_ts, content, channel, client_msg_id)
     else:
-        conversation(say, None, content, channel, user, client_msg_id)
+        conversation(say, thread_ts, content, channel, user, client_msg_id)
 
 
 # Handle the Lambda function
