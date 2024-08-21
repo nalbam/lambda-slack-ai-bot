@@ -1,5 +1,9 @@
 # lambda-slack-ai-bot
 
+A serverless Slack bot using AWS Lambda, API Gateway, and DynamoDB.
+
+![Bot](images/bot.png)
+
 ## Install
 
 ```bash
