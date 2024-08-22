@@ -41,6 +41,9 @@ resources:
         TimeToLiveSpecification:
           AttributeName: expire_at
           Enabled: true
+        Tags:
+          - Key: Project
+            Value: ${self:provider.environment.BASE_NAME}
 
 plugins:
   - serverless-python-requirements
