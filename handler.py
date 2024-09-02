@@ -13,7 +13,6 @@ from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 from openai import OpenAI
 
-BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 # Set up Slack API credentials
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
@@ -33,6 +32,9 @@ IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
 IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid")  # vivid, natural
 
 # Set up System messages
+PERSONAL_MESSAGE = os.environ.get(
+    "PERSONAL_MESSAGE", "당신은 친절하고 전문적인 AI 비서 입니다."
+)
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
@@ -41,6 +43,8 @@ MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
+
+BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 MSG_PREVIOUS = "이전 대화 내용 확인 중... " + BOT_CURSOR
 MSG_IMAGE_DESCRIBE = "이미지 감상 중... " + BOT_CURSOR
