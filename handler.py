@@ -485,7 +485,10 @@ def content_from_message(prompt, event, user):
     if KEYWARD_IMAGE in prompt:
         type = "image"
 
-    user_name = app.client.users_info(user=user).get("user").get("name")
+    user_info = app.client.users_info(user=user)
+    print("user_info: {}".format(user_info))
+
+    user_name = user_info.get("user").get("name")
 
     content = []
     content.append({"type": "text", "text": "{}: {}".format(user_name, prompt)})
