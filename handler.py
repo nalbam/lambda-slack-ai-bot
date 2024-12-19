@@ -371,7 +371,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         )
 
         try:
-            # print("image_generate: {}".format(messages))
+            print("image_generate: {}".format(messages))
 
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
@@ -409,7 +409,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             },
         )
 
-        # print("image_generate: {}".format(messages))
+        print("image_generate: {}".format(messages))
 
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
@@ -484,6 +484,9 @@ def content_from_message(prompt, event, user):
 
     if KEYWARD_IMAGE in prompt:
         type = "image"
+
+    print("users_info: {}".format(user))
+    print("users_info: {}".format(app.client.users_info(user=user)))
 
     user_name = app.client.users_info(user=user).get("real_name")
 
