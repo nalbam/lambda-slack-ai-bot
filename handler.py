@@ -314,7 +314,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
     # Send the prompt to ChatGPT
     try:
-        # print("conversation: {}".format(messages))
+        print("conversation: {}".format(messages))
 
         # Send the prompt to ChatGPT
         message = reply_text(messages, say, channel, thread_ts, latest_ts, user)
