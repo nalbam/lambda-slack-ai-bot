@@ -257,7 +257,7 @@ def conversations_replies(
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            user_name = app.client.users_info(user=message.get("user")).get("real_name")
+            user_name = app.client.users_info(user=message.get("user")).get("user").get("real_name")
 
             messages.append(
                 {
@@ -485,10 +485,7 @@ def content_from_message(prompt, event, user):
     if KEYWARD_IMAGE in prompt:
         type = "image"
 
-    print("users_info: {}".format(user))
-    print("users_info: {}".format(app.client.users_info(user=user)))
-
-    user_name = app.client.users_info(user=user).get("real_name")
+    user_name = app.client.users_info(user=user).get("user").get("real_name")
 
     content = []
     content.append({"type": "text", "text": "{}: {}".format(user_name, prompt)})
