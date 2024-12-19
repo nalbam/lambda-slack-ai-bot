@@ -13,13 +13,14 @@ from slack_bolt.adapter.aws_lambda import SlackRequestHandler
 
 from openai import OpenAI
 
+BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 # Set up Slack API credentials
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 
 # Keep track of conversation history by thread and user
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "slack-ai-bot-context")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "chatgpt-bot-context")
 
 # Set up ChatGPT API credentials
 OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)
@@ -32,9 +33,6 @@ IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
 IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid")  # vivid, natural
 
 # Set up System messages
-PERSONAL_MESSAGE = os.environ.get(
-    "PERSONAL_MESSAGE", "당신은 친절하고 전문적인 AI 비서 입니다."
-)
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
 
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
@@ -43,8 +41,6 @@ MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
-
-BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 MSG_PREVIOUS = "이전 대화 내용 확인 중... " + BOT_CURSOR
 MSG_IMAGE_DESCRIBE = "이미지 감상 중... " + BOT_CURSOR
@@ -261,10 +257,12 @@ def conversations_replies(
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
+            user_name = app.client.users_info(user=message.get("user")).get("real_name")
+
             messages.append(
                 {
                     "role": role,
-                    "content": message.get("text", ""),
+                    "content": "{}: {}".format(user_name, message.get("text", "")),
                 }
             )
 
@@ -316,12 +314,12 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
 
     # Send the prompt to ChatGPT
     try:
-        print("conversation: {}".format(messages))
+        # print("conversation: {}".format(messages))
 
         # Send the prompt to ChatGPT
         message = reply_text(messages, say, channel, thread_ts, latest_ts, user)
 
-        print("conversation: {}".format(message))
+        # print("conversation: {}".format(message))
 
     except Exception as e:
         print("conversation: Error handling message: {}".format(e))
@@ -373,7 +371,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
         )
 
         try:
-            print("image_generate: {}".format(messages))
+            # print("image_generate: {}".format(messages))
 
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
@@ -381,7 +379,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
                 # temperature=TEMPERATURE,
             )
 
-            print("image_generate: {}".format(response))
+            # print("image_generate: {}".format(response))
 
             prompts.append(response.choices[0].message.content)
 
@@ -411,7 +409,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             },
         )
 
-        print("image_generate: {}".format(messages))
+        # print("image_generate: {}".format(messages))
 
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
@@ -419,7 +417,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
             # temperature=TEMPERATURE,
         )
 
-        print("image_generate: {}".format(response))
+        # print("image_generate: {}".format(response))
 
         prompt = response.choices[0].message.content
 
@@ -481,14 +479,16 @@ def get_encoded_image_from_slack(image_url):
 
 
 # Extract content from the message
-def content_from_message(prompt, event):
+def content_from_message(prompt, event, user):
     type = "text"
 
     if KEYWARD_IMAGE in prompt:
         type = "image"
 
+    user_name = app.client.users_info(user=user).get("real_name")
+
     content = []
-    content.append({"type": "text", "text": prompt})
+    content.append({"type": "text", "text": "{}: {}".format(user_name, prompt)})
 
     if "files" in event:
         files = event.get("files", [])
@@ -514,7 +514,7 @@ def content_from_message(prompt, event):
 # Handle the app_mention event
 @app.event("app_mention")
 def handle_mention(body: dict, say: Say):
-    print("handle_mention: {}".format(body))
+    # print("handle_mention: {}".format(body))
 
     event = body["event"]
 
@@ -528,7 +528,7 @@ def handle_mention(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content, type = content_from_message(prompt, event)
+    content, type = content_from_message(prompt, event, user)
 
     if type == "image":
         image_generate(say, thread_ts, content, channel, client_msg_id)
@@ -539,7 +539,7 @@ def handle_mention(body: dict, say: Say):
 # Handle the DM (direct message) event
 @app.event("message")
 def handle_message(body: dict, say: Say):
-    print("handle_message: {}".format(body))
+    # print("handle_message: {}".format(body))
 
     event = body["event"]
 
@@ -553,7 +553,7 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content, type = content_from_message(prompt, event)
+    content, type = content_from_message(prompt, event, user)
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
