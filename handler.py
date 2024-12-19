@@ -257,7 +257,8 @@ def conversations_replies(
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            user_name = app.client.users_info(user=message.get("user")).get("user").get("name")
+            user_info = app.client.users_info(user=message.get("user"))
+            user_name = user_info.get("user").get("profile").get("display_name")
 
             messages.append(
                 {
@@ -488,7 +489,7 @@ def content_from_message(prompt, event, user):
     user_info = app.client.users_info(user=user)
     print("user_info: {}".format(user_info))
 
-    user_name = user_info.get("user").get("name")
+    user_name = user_info.get("user").get("profile").get("display_name")
 
     content = []
     content.append({"type": "text", "text": "{}: {}".format(user_name, prompt)})
