@@ -252,7 +252,7 @@ def get_reactions(reactions):
         reaction_text = ""
         for reaction_name, reaction_users in reaction_map.items():
             reaction_text += (
-                "[이모지 " + reaction_name + " 누른 사람: " + ",".join(reaction_users) + "] "
+                "{이모지 " + reaction_name + " 누른 사람: " + ",".join(reaction_users) + "} "
             )
         return reaction_text
     except Exception as e:
