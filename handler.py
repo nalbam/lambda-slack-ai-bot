@@ -261,9 +261,7 @@ def get_reactions(reactions):
 
 
 # Get thread messages using conversations.replies API method
-def conversations_replies(
-    channel, ts, client_msg_id, messages=[], MAX_LEN_OPENAI=MAX_LEN_OPENAI, type=None
-):
+def conversations_replies(channel, ts, client_msg_id, messages=[], type=None):
     try:
         response = app.client.conversations_replies(channel=channel, ts=ts)
 
