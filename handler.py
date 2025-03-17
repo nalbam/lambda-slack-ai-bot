@@ -41,6 +41,7 @@ MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 KEYWARD_IMAGE = "그려줘"
+KEYWARD_EMOJI = "이모지"
 
 MSG_PREVIOUS = "이전 대화 내용 확인 중... " + BOT_CURSOR
 MSG_IMAGE_DESCRIBE = "이미지 감상 중... " + BOT_CURSOR
@@ -229,9 +230,30 @@ def reply_image(prompt, say, channel, thread_ts, latest_ts):
     return image_url
 
 
+def get_reactions(reactions):
+    reaction_map = {}
+    reaction_users_cache = {}
+    for reaction in reactions:
+        reaction_name = ":" + reaction.get("name").split(":")[0] + ":"
+        if reaction_name not in reaction_map:
+            reaction_map[reaction_name] = []
+        reaction_users = reaction.get("users", [])
+        for reaction_user in reaction_users:
+            if reaction_user not in reaction_users_cache:
+                reaction_user_info = app.client.users_info(user=reaction_user)
+                reaction_users_cache[reaction_user] = (
+                    reaction_user_info.get("user").get("profile").get("display_name")
+                )
+            reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
+    reaction_text = ""
+    for reaction_name, reaction_users in reaction_map.items():
+        reaction_text += "(" + reaction_name + " [" + ",".join(reaction_users) + "])"
+    return reaction_text
+
+
 # Get thread messages using conversations.replies API method
 def conversations_replies(
-    channel, ts, client_msg_id, messages=[], MAX_LEN_OPENAI=MAX_LEN_OPENAI
+    channel, ts, client_msg_id, messages=[], MAX_LEN_OPENAI=MAX_LEN_OPENAI, type=None
 ):
     try:
         response = app.client.conversations_replies(channel=channel, ts=ts)
@@ -246,6 +268,8 @@ def conversations_replies(
             )
 
         res_messages = response.get("messages", [])
+        first_ts = res_messages[0].get("ts")
+
         res_messages.reverse()
         res_messages.pop(0)  # remove the first message
 
@@ -257,9 +281,19 @@ def conversations_replies(
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
+            # 첫번째 메시지에 리액션이 있으면 리액션을 추가
+            if type == "emoji" and message.get("ts") == first_ts:
+                reactions = get_reactions(message.get("reactions", []))
+                messages.append(
+                    {
+                        "role": role,
+                        "content": "reactions - {}".format(reactions),
+                    }
+                )
+
+            # 메세지에 유저 이름을 추가
             user_info = app.client.users_info(user=message.get("user"))
             user_name = user_info.get("user").get("profile").get("display_name")
-
             messages.append(
                 {
                     "role": role,
@@ -290,7 +324,7 @@ def conversations_replies(
 
 
 # Handle the chatgpt conversation
-def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
+def conversation(say: Say, thread_ts, content, channel, user, client_msg_id, type=None):
     print("conversation: {}".format(json.dumps(content)))
 
     # Keep track of the latest message timestamp
@@ -309,7 +343,9 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id):
     if thread_ts != None:
         chat_update(say, channel, thread_ts, latest_ts, MSG_PREVIOUS)
 
-        messages = conversations_replies(channel, thread_ts, client_msg_id, messages)
+        messages = conversations_replies(
+            channel, thread_ts, client_msg_id, messages, type
+        )
 
         messages = messages[::-1]  # reversed
 
@@ -485,6 +521,8 @@ def content_from_message(prompt, event, user):
 
     if KEYWARD_IMAGE in prompt:
         type = "image"
+    elif KEYWARD_EMOJI in prompt:
+        type = "emoji"
 
     user_info = app.client.users_info(user=user)
     print("user_info: {}".format(user_info))
@@ -537,7 +575,7 @@ def handle_mention(body: dict, say: Say):
     if type == "image":
         image_generate(say, thread_ts, content, channel, client_msg_id)
     else:
-        conversation(say, thread_ts, content, channel, user, client_msg_id)
+        conversation(say, thread_ts, content, channel, user, client_msg_id, type)
 
 
 # Handle the DM (direct message) event
