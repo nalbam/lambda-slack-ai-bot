@@ -251,7 +251,9 @@ def get_reactions(reactions):
                 reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
         reaction_text = ""
         for reaction_name, reaction_users in reaction_map.items():
-            reaction_text += "(" + reaction_name + " 이모지 누른사람: " + ",".join(reaction_users) + ")"
+            reaction_text += (
+                "[" + reaction_name + " reactions " + ",".join(reaction_users) + "]"
+            )
         return reaction_text
     except Exception as e:
         print("get_reactions: {}".format(e))
@@ -293,7 +295,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
                     messages.append(
                         {
                             "role": role,
-                            "content": "reactions {}".format(reactions),
+                            "content": "이모지 {}".format(reactions),
                         }
                     )
 
