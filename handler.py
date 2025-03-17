@@ -295,7 +295,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
                     messages.append(
                         {
                             "role": role,
-                            "content": "이모지 정리 {}".format(reactions),
+                            "content": "리액션 정리 {}".format(reactions),
                         }
                     )
 
