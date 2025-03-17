@@ -277,7 +277,7 @@ def conversations_replies(
             )
 
         res_messages = response.get("messages", [])
-        first_ts = res_messages[0].get("ts")
+        first_ts = str(res_messages[0].get("ts"))
 
         res_messages.reverse()
         res_messages.pop(0)  # remove the first message
@@ -291,7 +291,7 @@ def conversations_replies(
                 role = "assistant"
 
             # 첫번째 메시지에 리액션이 있으면 리액션을 추가
-            if type == "emoji" and message.get("ts") == first_ts:
+            if type == "emoji" and first_ts == str(message.get("ts")):
                 reactions = get_reactions(message.get("reactions", []))
                 if reactions != "":
                     messages.append(
