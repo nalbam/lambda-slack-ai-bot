@@ -236,7 +236,7 @@ def get_reactions(reactions):
         reaction_map = {}
         reaction_users_cache = {}
         for reaction in reactions:
-            reaction_name = ":" + reaction.get("name") + ":"
+            reaction_name = ":" + reaction.get("name").split(":")[0] + ":"
             if reaction_name not in reaction_map:
                 reaction_map[reaction_name] = []
             reaction_users = reaction.get("users", [])
