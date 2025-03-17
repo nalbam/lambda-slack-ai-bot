@@ -288,7 +288,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            # 첫번째 메시지에 리액션이 있으면 리액션을 추가
+            # prompt 에 이모지 키워드가 있고, 첫번째 메시지에 리액션이 있으면 리액션을 추가
             if type == "emoji" and first_ts == str(message.get("ts")):
                 reactions = get_reactions(message.get("reactions", []))
                 if reactions != "":
