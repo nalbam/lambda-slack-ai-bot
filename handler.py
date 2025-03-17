@@ -230,25 +230,34 @@ def reply_image(prompt, say, channel, thread_ts, latest_ts):
     return image_url
 
 
+# Get reactions
 def get_reactions(reactions):
-    reaction_map = {}
-    reaction_users_cache = {}
-    for reaction in reactions:
-        reaction_name = ":" + reaction.get("name").split(":")[0] + ":"
-        if reaction_name not in reaction_map:
-            reaction_map[reaction_name] = []
-        reaction_users = reaction.get("users", [])
-        for reaction_user in reaction_users:
-            if reaction_user not in reaction_users_cache:
-                reaction_user_info = app.client.users_info(user=reaction_user)
-                reaction_users_cache[reaction_user] = (
-                    reaction_user_info.get("user").get("profile").get("display_name")
-                )
-            reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
-    reaction_text = ""
-    for reaction_name, reaction_users in reaction_map.items():
-        reaction_text += "(" + reaction_name + " [" + ",".join(reaction_users) + "])"
-    return reaction_text
+    try:
+        reaction_map = {}
+        reaction_users_cache = {}
+        for reaction in reactions:
+            reaction_name = ":" + reaction.get("name").split(":")[0] + ":"
+            if reaction_name not in reaction_map:
+                reaction_map[reaction_name] = []
+            reaction_users = reaction.get("users", [])
+            for reaction_user in reaction_users:
+                if reaction_user not in reaction_users_cache:
+                    reaction_user_info = app.client.users_info(user=reaction_user)
+                    reaction_users_cache[reaction_user] = (
+                        reaction_user_info.get("user")
+                        .get("profile")
+                        .get("display_name")
+                    )
+                reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
+        reaction_text = ""
+        for reaction_name, reaction_users in reaction_map.items():
+            reaction_text += (
+                "(" + reaction_name + " [" + ",".join(reaction_users) + "])"
+            )
+        return reaction_text
+    except Exception as e:
+        print("get_reactions: {}".format(e))
+        return ""
 
 
 # Get thread messages using conversations.replies API method
@@ -284,12 +293,13 @@ def conversations_replies(
             # 첫번째 메시지에 리액션이 있으면 리액션을 추가
             if type == "emoji" and message.get("ts") == first_ts:
                 reactions = get_reactions(message.get("reactions", []))
-                messages.append(
-                    {
-                        "role": role,
-                        "content": "reactions - {}".format(reactions),
-                    }
-                )
+                if reactions != "":
+                    messages.append(
+                        {
+                            "role": role,
+                            "content": "reactions {}".format(reactions),
+                        }
+                    )
 
             # 메세지에 유저 이름을 추가
             user_info = app.client.users_info(user=message.get("user"))
