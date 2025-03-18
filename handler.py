@@ -251,7 +251,7 @@ def get_reactions(reactions):
                 reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
         reaction_text = ""
         for reaction_name, reaction_users in reaction_map.items():
-            reaction_text += "[{} {} reaction_users {}] ".format(
+            reaction_text += "[{} `{}` reaction users: {}] ".format(
                 KEYWARD_EMOJI, reaction_name, ",".join(reaction_users)
             )
         return reaction_text
