@@ -5,9 +5,9 @@ provider:
   name: aws
   region: us-east-1
   runtime: python3.9
-  # stage: prod
-  # memorySize: 5120
-  timeout: 600
+  stage: ${opt:stage, 'dev'}
+  memorySize: 5120
+  timeout: 29
   environment:
     BASE_NAME: slack-ai-bot
   iamRoleStatements:
@@ -32,7 +32,7 @@ resources:
     DynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:provider.environment.BASE_NAME}-context
+        TableName: ${self:provider.environment.BASE_NAME}-${self:provider.stage}
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S

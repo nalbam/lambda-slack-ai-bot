@@ -69,7 +69,7 @@ OPENAI_API_KEY="sk-xxxx"
 In order to deploy the example, you need to run the following command:
 
 ```bash
-$ sls deploy --region us-east-1
+$ sls deploy --stage dev --region us-east-1
 ```
 
 ## Slack Test
