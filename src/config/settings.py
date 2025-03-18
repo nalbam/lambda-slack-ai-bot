@@ -4,13 +4,16 @@
 import os
 from typing import Optional, Dict, Any
 
+# 환경 변수 설정
+STAGE = os.environ.get("STAGE", "dev")
+
 # Slack 설정
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 # DynamoDB 설정
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", "slack-ai-bot-context")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", f"slack-ai-bot-{STAGE}")
 
 # OpenAI 설정
 OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)
@@ -60,11 +63,11 @@ CONVERSION_ARRAY = [
 def validate_env_vars() -> None:
     """필수 환경 변수의 존재 여부를 확인합니다."""
     required_vars = [
-        "SLACK_BOT_TOKEN", 
-        "SLACK_SIGNING_SECRET", 
+        "SLACK_BOT_TOKEN",
+        "SLACK_SIGNING_SECRET",
         "OPENAI_API_KEY"
     ]
-    
+
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
     if missing_vars:
         raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
