@@ -1,4 +1,4 @@
-name: Deploy to AWS Lambda
+name: Deploy to AWS Lambda v2
 
 on:
   push:
