@@ -33,7 +33,6 @@ dist/
 *.tmp
 
 # serverless
-.env
 .serverless
 
 # python
