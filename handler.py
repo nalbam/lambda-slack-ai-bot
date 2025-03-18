@@ -527,6 +527,19 @@ def get_encoded_image_from_slack(image_url):
     return None
 
 
+# Replace the emoji pattern
+def replace_emoji_pattern(text):
+    # 패턴: :로 시작하고, 문자 그룹이 있고, :가 오고, 문자 그룹이 있고, :로 끝나는 패턴
+    pattern = r":([^:]+):([^:]+):"
+
+    # 첫 번째 그룹만 유지하고 두 번째 그룹은 제거
+    replacement = r":\1:"
+
+    # 치환 실행
+    result = re.sub(pattern, replacement, text)
+    return result
+
+
 # Extract content from the message
 def content_from_message(prompt, event, user):
     type = "text"
@@ -535,8 +548,7 @@ def content_from_message(prompt, event, user):
         type = "image"
     elif KEYWARD_EMOJI in prompt:
         type = "emoji"
-        # reg replace :hand:thone-1: -> :hand:
-        prompt = re.sub(r":(\w+):(\w+):", r":\1:", prompt)
+        prompt = replace_emoji_pattern(prompt)
 
     user_info = app.client.users_info(user=user)
     print("user_info: {}".format(user_info))
