@@ -252,7 +252,11 @@ def get_reactions(reactions):
         reaction_text = ""
         for reaction_name, reaction_users in reaction_map.items():
             reaction_text += (
-                "{이모지 " + reaction_name + " 누른 사람: " + ",".join(reaction_users) + "} "
+                "{이모지 "
+                + reaction_name
+                + " 누른 사람: "
+                + ",".join(reaction_users)
+                + "} "
             )
         return reaction_text
     except Exception as e:
@@ -376,7 +380,7 @@ def conversation(say: Say, thread_ts, content, channel, user, client_msg_id, typ
 
 
 # Handle the image generation
-def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
+def image_generate(say: Say, thread_ts, content, channel, client_msg_id, type=None):
     print("image_generate: {}".format(content))
 
     # Keep track of the latest message timestamp
@@ -391,7 +395,7 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id):
     if thread_ts != None:
         chat_update(say, channel, thread_ts, latest_ts, MSG_PREVIOUS)
 
-        replies = conversations_replies(channel, thread_ts, client_msg_id, [])
+        replies = conversations_replies(channel, thread_ts, client_msg_id, [], type)
 
         replies = replies[::-1]  # reversed
 
@@ -583,7 +587,7 @@ def handle_mention(body: dict, say: Say):
     content, type = content_from_message(prompt, event, user)
 
     if type == "image":
-        image_generate(say, thread_ts, content, channel, client_msg_id)
+        image_generate(say, thread_ts, content, channel, client_msg_id, type)
     else:
         conversation(say, thread_ts, content, channel, user, client_msg_id, type)
 
