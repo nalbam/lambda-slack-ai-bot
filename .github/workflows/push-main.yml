@@ -13,6 +13,8 @@ env:
   AWS_REGION: "us-east-1"
   AWS_ROLE_NAME: "lambda-slack-ai-bot"
 
+  STAGE: "prod"
+
   BOT_CURSOR: ${{ vars.BOT_CURSOR }}
   OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
   SYSTEM_MESSAGE: ${{ vars.SYSTEM_MESSAGE }}
@@ -58,6 +60,7 @@ jobs:
 
       - name: Set up environment variables 📝
         run: |
+          echo "STAGE=${STAGE}" >> .env
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
@@ -75,4 +78,4 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to AWS Lambda 🚀
-        run: npx serverless deploy --stage prod --region ${{ env.AWS_REGION }}
+        run: npx serverless deploy --stage ${{ env.STAGE }} --region ${{ env.AWS_REGION }}

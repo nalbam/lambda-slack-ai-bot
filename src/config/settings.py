@@ -13,7 +13,8 @@ SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
 
 # DynamoDB 설정
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", f"slack-ai-bot-{STAGE}")
+BASE_NAME = os.environ.get("BASE_NAME", "slack-ai-bot")
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", f"{BASE_NAME}-{STAGE}")
 
 # OpenAI 설정
 OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)

@@ -15,6 +15,9 @@ from src.handlers.message_handler import MessageHandler
 # 환경 변수 검증
 settings.validate_env_vars()
 
+# DynamoDB 테이블 확인
+context_manager.check_table_exists()
+
 # Slack 앱 초기화
 app = slack_api.initialize_slack_app()
 
