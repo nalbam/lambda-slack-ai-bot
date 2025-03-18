@@ -40,8 +40,8 @@ TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
 MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
-KEYWARD_IMAGE = "그려줘"
-KEYWARD_EMOJI = "이모지"
+KEYWARD_IMAGE = os.environ.get("KEYWARD_IMAGE", "그려줘")
+KEYWARD_EMOJI = os.environ.get("KEYWARD_EMOJI", "이모지")
 
 MSG_PREVIOUS = "이전 대화 내용 확인 중... " + BOT_CURSOR
 MSG_IMAGE_DESCRIBE = "이미지 감상 중... " + BOT_CURSOR
@@ -251,12 +251,8 @@ def get_reactions(reactions):
                 reaction_map[reaction_name].append(reaction_users_cache[reaction_user])
         reaction_text = ""
         for reaction_name, reaction_users in reaction_map.items():
-            reaction_text += (
-                "{이모지 "
-                + reaction_name
-                + " 누른 사람: "
-                + ",".join(reaction_users)
-                + "} "
+            reaction_text += "[{} {} reaction_users {}] ".format(
+                KEYWARD_EMOJI, reaction_name, ",".join(reaction_users)
             )
         return reaction_text
     except Exception as e:
@@ -299,7 +295,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
                     messages.append(
                         {
                             "role": role,
-                            "content": "리액션 정리 {}".format(reactions),
+                            "content": "reactions {}".format(reactions),
                         }
                     )
 
