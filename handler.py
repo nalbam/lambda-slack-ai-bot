@@ -531,6 +531,8 @@ def content_from_message(prompt, event, user):
         type = "image"
     elif KEYWARD_EMOJI in prompt:
         type = "emoji"
+        # reg replace :hand:thone-1: -> :hand:
+        prompt = re.sub(r":(\w+):(\w+):", r":\1:", prompt)
 
     user_info = app.client.users_info(user=user)
     print("user_info: {}".format(user_info))
