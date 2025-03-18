@@ -16,7 +16,7 @@ logger = logging.getLogger('lambda-slack-ai-bot')
 
 def setup_logger(level: int = logging.INFO) -> None:
     """로거 레벨을 설정합니다.
-    
+
     Args:
         level: 로깅 레벨 (logging.DEBUG, logging.INFO 등)
     """
@@ -24,7 +24,7 @@ def setup_logger(level: int = logging.INFO) -> None:
 
 def log_info(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     """INFO 레벨 로그를 기록합니다.
-    
+
     Args:
         message: 로그 메시지
         extra: 추가 로그 데이터 (딕셔너리)
@@ -36,7 +36,7 @@ def log_info(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
 
 def log_error(message: str, error: Optional[Exception] = None, extra: Optional[Dict[str, Any]] = None) -> None:
     """ERROR 레벨 로그를 기록합니다.
-    
+
     Args:
         message: 에러 메시지
         error: 예외 객체
@@ -55,7 +55,7 @@ def log_error(message: str, error: Optional[Exception] = None, extra: Optional[D
 
 def log_debug(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     """DEBUG 레벨 로그를 기록합니다.
-    
+
     Args:
         message: 로그 메시지
         extra: 추가 로그 데이터 (딕셔너리)
@@ -67,7 +67,7 @@ def log_debug(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
 
 def log_warning(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     """WARNING 레벨 로그를 기록합니다.
-    
+
     Args:
         message: 경고 메시지
         extra: 추가 로그 데이터 (딕셔너리)

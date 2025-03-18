@@ -42,11 +42,11 @@ def handle_message(body: Dict[str, Any], say):
     """메시지 이벤트 핸들러"""
     try:
         event = body.get("event", {})
-        
+
         # 봇 메시지 무시
         if "bot_id" in event:
             return
-            
+
         logger.log_info("메시지 이벤트 처리", {"event_id": body.get("event_id")})
         message_handler.handle_message(body, say)
     except Exception as e:
@@ -54,11 +54,11 @@ def handle_message(body: Dict[str, Any], say):
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """AWS Lambda 함수 핸들러
-    
+
     Args:
         event: Lambda 이벤트 데이터
         context: Lambda 컨텍스트
-        
+
     Returns:
         Lambda 응답
     """
@@ -66,7 +66,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # JSON 파싱
         if "body" in event:
             body = json.loads(event["body"])
-            
+
             # Slack 이벤트 확인 요청 처리
             if "challenge" in body:
                 logger.log_info("Slack 이벤트 확인 요청 처리")
@@ -75,7 +75,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     "headers": {"Content-type": "application/json"},
                     "body": json.dumps({"challenge": body["challenge"]}),
                 }
-            
+
             # 이벤트 검증
             if "event" not in body or "client_msg_id" not in body.get("event", {}):
                 logger.log_info("이벤트 데이터 누락 또는 중복 요청")
@@ -84,12 +84,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     "headers": {"Content-type": "application/json"},
                     "body": json.dumps({"status": "Success"}),
                 }
-            
+
             # 중복 요청 방지를 위한 컨텍스트 확인
             token = body["event"]["client_msg_id"]
             user = body["event"]["user"]
-            prompt = context_manager.get_context(None, user)
-            
+            prompt = context_manager.get_context(token, user)
+
             if prompt != "":
                 logger.log_info("중복 요청 감지", {"token": token, "user": user})
                 return {
@@ -97,16 +97,16 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     "headers": {"Content-type": "application/json"},
                     "body": json.dumps({"status": "Success"}),
                 }
-            
+
             # 컨텍스트 저장
             context_manager.put_context(token, user, body["event"]["text"])
-            
+
         # Slack 이벤트 처리
         return slack_handler.handle(event, context)
-        
+
     except Exception as e:
         logger.log_error("Lambda 핸들러 오류", e, {"event": event})
-        
+
         return {
             "statusCode": 500,
             "headers": {"Content-type": "application/json"},

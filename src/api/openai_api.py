@@ -35,16 +35,16 @@ def generate_chat_completion(
     temperature: float = settings.TEMPERATURE
 ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
     """OpenAI 채팅 API를 사용하여 응답을 생성합니다.
-    
+
     Args:
         messages: 대화 메시지 목록 (역할 및 내용)
         user: 사용자 ID
         stream: 스트리밍 사용 여부
         temperature: 생성 온도 (0.0~1.0)
-        
+
     Returns:
         OpenAI API 응답 또는 스트림 객체
-        
+
     Raises:
         OpenAIApiError: API 호출 중 오류 발생 시
     """
@@ -53,7 +53,7 @@ def generate_chat_completion(
         log_messages = messages
         if len(messages) > 10:
             log_messages = [messages[0], "...", messages[-1]]
-        
+
         logger.log_debug(f"OpenAI API 요청", {
             "model": settings.OPENAI_MODEL,
             "messages_count": len(messages),
@@ -61,7 +61,7 @@ def generate_chat_completion(
             "user": user,
             "stream": stream
         })
-        
+
         response = openai_client.chat.completions.create(
             model=settings.OPENAI_MODEL,
             messages=messages,
@@ -69,9 +69,9 @@ def generate_chat_completion(
             stream=stream,
             user=user,
         )
-        
+
         return response
-        
+
     except Exception as e:
         logger.log_error("OpenAI 채팅 API 호출 중 오류 발생", e)
         raise OpenAIApiError(f"OpenAI API 오류: {str(e)}")
@@ -84,13 +84,13 @@ def generate_chat_completion(
 )
 def generate_image(prompt: str) -> Dict[str, Any]:
     """OpenAI DALL-E API를 사용하여 이미지를 생성합니다.
-    
+
     Args:
         prompt: 이미지 생성을 위한 프롬프트
-        
+
     Returns:
         이미지 URL과 수정된 프롬프트를 포함한 결과
-        
+
     Raises:
         OpenAIApiError: API 호출 중 오류 발생 시
     """
@@ -99,7 +99,7 @@ def generate_image(prompt: str) -> Dict[str, Any]:
             "model": settings.IMAGE_MODEL,
             "prompt": prompt
         })
-        
+
         response = openai_client.images.generate(
             model=settings.IMAGE_MODEL,
             prompt=prompt,
@@ -108,18 +108,18 @@ def generate_image(prompt: str) -> Dict[str, Any]:
             style=settings.IMAGE_STYLE,
             n=1,
         )
-        
+
         result = {
             "image_url": response.data[0].url,
             "revised_prompt": response.data[0].revised_prompt
         }
-        
+
         logger.log_debug("OpenAI 이미지 생성 성공", {
-            "revised_prompt": response.data[0].revised_prompt[:50] + "..." 
+            "revised_prompt": response.data[0].revised_prompt[:50] + "..."
         })
-        
+
         return result
-        
+
     except Exception as e:
         logger.log_error("OpenAI 이미지 생성 중 오류 발생", e, {
             "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
@@ -128,24 +128,24 @@ def generate_image(prompt: str) -> Dict[str, Any]:
 
 def extract_content_from_stream(stream: Generator[Dict[str, Any], None, None]) -> Tuple[str, int]:
     """스트림에서 콘텐츠를 추출합니다.
-    
+
     Args:
         stream: OpenAI 스트림 객체
-        
+
     Returns:
         (추출된 텍스트, 추출된 청크 수)의 튜플
     """
     message = ""
     chunk_count = 0
-    
+
     try:
         for chunk in stream:
             chunk_count += 1
             content = chunk.choices[0].delta.content or ""
             message += content
-            
+
         return message, chunk_count
-    
+
     except Exception as e:
         logger.log_error("스트림에서 콘텐츠 추출 중 오류 발생", e)
         return message, chunk_count
