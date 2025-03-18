@@ -13,7 +13,6 @@ env:
   AWS_ROLE_NAME: "lambda-slack-ai-bot"
 
   BOT_CURSOR: ${{ vars.BOT_CURSOR }}
-  DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
   OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
   SYSTEM_MESSAGE: ${{ vars.SYSTEM_MESSAGE }}
   TEMPERATURE: ${{ vars.TEMPERATURE }}
@@ -59,7 +58,6 @@ jobs:
       - name: Set up environment variables 📝
         run: |
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
-          echo "DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME}" >> .env
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
           echo "OPENAI_ORG_ID=${OPENAI_ORG_ID}" >> .env
