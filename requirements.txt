@@ -1,5 +1,6 @@
-boto3
-openai
-slack-bolt
-slack-sdk
-requests
+boto3>=1.28.0
+openai>=1.6.0
+slack-bolt>=1.18.0
+slack-sdk>=3.23.0
+requests>=2.31.0
+tenacity>=8.2.3
