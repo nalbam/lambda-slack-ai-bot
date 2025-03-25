@@ -1,5 +1,12 @@
 # lambda-slack-ai-bot Development Guide
 
+## Basic Guidelines
+- Focus on solving the specific problem - avoid unnecessary complexity or scope creep.
+- Use standard libraries and documented patterns first before creating custom solutions.
+- Write clean, well-structured code with meaningful names and clear organization.
+- Handle errors and edge cases properly to ensure code robustness.
+- Include helpful comments for complex logic while keeping code self-documenting.
+
 ## Commands
 - Deploy: `sls deploy --region us-east-1`
 - Install dependencies: `python -m pip install --upgrade -r requirements.txt`
