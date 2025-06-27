@@ -7,7 +7,7 @@ provider:
   runtime: python3.12
   stage: ${opt:stage, 'dev'}
   memorySize: 5120
-  timeout: 300
+  timeout: 600
   environment:
     BASE_NAME: slack-ai-bot
   iamRoleStatements:
