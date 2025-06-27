@@ -1,6 +1,7 @@
 """
 Slack API 래퍼 모듈
 """
+
 import re
 import functools
 import requests
@@ -16,9 +17,12 @@ from src.utils import logger
 # 사용자 정보 캐시
 _user_info_cache = {}
 
+
 class SlackApiError(Exception):
     """Slack API 오류 클래스"""
+
     pass
+
 
 def initialize_slack_app() -> App:
     """Slack 앱을 초기화합니다.
@@ -42,6 +46,7 @@ def initialize_slack_app() -> App:
         logger.log_error("Slack 앱 초기화 중 오류 발생", e)
         raise SlackApiError(f"Slack 앱 초기화 오류: {str(e)}")
 
+
 def get_bot_id(app: App) -> str:
     """봇 ID를 가져옵니다.
 
@@ -57,6 +62,7 @@ def get_bot_id(app: App) -> str:
     except SlackApiError as e:
         logger.log_error("봇 ID 조회 중 오류 발생", e)
         raise SlackApiError(f"봇 ID 조회 오류: {str(e)}")
+
 
 @functools.lru_cache(maxsize=100)
 def get_user_info(app: App, user_id: str) -> Dict[str, Any]:
@@ -81,6 +87,7 @@ def get_user_info(app: App, user_id: str) -> Dict[str, Any]:
         logger.log_error("사용자 정보 조회 중 오류 발생", e, {"user_id": user_id})
         return {}
 
+
 def get_user_display_name(app: App, user_id: str) -> str:
     """사용자의 표시 이름을 가져옵니다.
 
@@ -93,6 +100,7 @@ def get_user_display_name(app: App, user_id: str) -> str:
     """
     user_info = get_user_info(app, user_id)
     return user_info.get("profile", {}).get("display_name", "Unknown User")
+
 
 def update_message(app: App, channel: str, ts: str, text: str) -> Dict[str, Any]:
     """기존 Slack 메시지를 업데이트합니다.
@@ -107,20 +115,22 @@ def update_message(app: App, channel: str, ts: str, text: str) -> Dict[str, Any]
         Slack API 응답
     """
     try:
-        response = app.client.chat_update(
-            channel=channel,
-            ts=ts,
-            text=text
-        )
+        response = app.client.chat_update(channel=channel, ts=ts, text=text)
         return response
     except SlackApiError as e:
-        logger.log_error("메시지 업데이트 중 오류 발생", e, {
-            "channel": channel,
-            "ts": ts
-        })
+        logger.log_error(
+            "메시지 업데이트 중 오류 발생", e, {"channel": channel, "ts": ts}
+        )
         raise SlackApiError(f"메시지 업데이트 오류: {str(e)}")
 
-def upload_file(app: App, channel: str, file_data: bytes, filename: str, thread_ts: Optional[str] = None) -> Dict[str, Any]:
+
+def upload_file(
+    app: App,
+    channel: str,
+    file_data: bytes,
+    filename: str,
+    thread_ts: Optional[str] = None,
+) -> Dict[str, Any]:
     """Slack 채널에 파일을 업로드합니다.
 
     Args:
@@ -134,11 +144,7 @@ def upload_file(app: App, channel: str, file_data: bytes, filename: str, thread_
         Slack API 응답
     """
     try:
-        kwargs = {
-            "channel": channel,
-            "filename": filename,
-            "file": file_data
-        }
+        kwargs = {"channel": channel, "filename": filename, "file": file_data}
 
         if thread_ts:
             kwargs["thread_ts"] = thread_ts
@@ -146,12 +152,13 @@ def upload_file(app: App, channel: str, file_data: bytes, filename: str, thread_
         response = app.client.files_upload_v2(**kwargs)
         return response
     except SlackApiError as e:
-        logger.log_error("파일 업로드 중 오류 발생", e, {
-            "channel": channel,
-            "filename": filename,
-            "thread_ts": thread_ts
-        })
+        logger.log_error(
+            "파일 업로드 중 오류 발생",
+            e,
+            {"channel": channel, "filename": filename, "thread_ts": thread_ts},
+        )
         raise SlackApiError(f"파일 업로드 오류: {str(e)}")
+
 
 def get_image_from_slack(image_url: str) -> Optional[bytes]:
     """Slack에서 이미지를 가져옵니다.
@@ -169,15 +176,17 @@ def get_image_from_slack(image_url: str) -> Optional[bytes]:
         if response.status_code == 200:
             return response.content
         else:
-            logger.log_error(f"이미지 다운로드 실패", None, {
-                "url": image_url,
-                "status_code": response.status_code
-            })
+            logger.log_error(
+                f"이미지 다운로드 실패",
+                None,
+                {"url": image_url, "status_code": response.status_code},
+            )
             return None
 
     except requests.RequestException as e:
         logger.log_error("이미지 다운로드 중 오류 발생", e, {"url": image_url})
         return None
+
 
 def get_encoded_image_from_slack(image_url: str) -> Optional[str]:
     """Slack에서 이미지를 가져와 base64로 인코딩합니다.
@@ -195,7 +204,10 @@ def get_encoded_image_from_slack(image_url: str) -> Optional[str]:
 
     return None
 
-def get_thread_messages(app: App, channel: str, thread_ts: str, client_msg_id: Optional[str] = None) -> List[Dict[str, Any]]:
+
+def get_thread_messages(
+    app: App, channel: str, thread_ts: str, client_msg_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """스레드 메시지를 가져옵니다.
 
     Args:
@@ -211,11 +223,11 @@ def get_thread_messages(app: App, channel: str, thread_ts: str, client_msg_id: O
         response = app.client.conversations_replies(channel=channel, ts=thread_ts)
 
         if not response.get("ok"):
-            logger.log_error("스레드 메시지 조회 실패", None, {
-                "channel": channel,
-                "thread_ts": thread_ts,
-                "response": response
-            })
+            logger.log_error(
+                "스레드 메시지 조회 실패",
+                None,
+                {"channel": channel, "thread_ts": thread_ts, "response": response},
+            )
             return []
 
         messages = response.get("messages", [])
@@ -234,11 +246,13 @@ def get_thread_messages(app: App, channel: str, thread_ts: str, client_msg_id: O
         return messages
 
     except SlackApiError as e:
-        logger.log_error("스레드 메시지 조회 중 오류 발생", e, {
-            "channel": channel,
-            "thread_ts": thread_ts
-        })
+        logger.log_error(
+            "스레드 메시지 조회 중 오류 발생",
+            e,
+            {"channel": channel, "thread_ts": thread_ts},
+        )
         return []
+
 
 def get_reactions(app: App, reactions: List[Dict[str, Any]]) -> str:
     """반응(이모지) 정보를 텍스트로 변환합니다.
@@ -269,13 +283,16 @@ def get_reactions(app: App, reactions: List[Dict[str, Any]]) -> str:
 
         reaction_texts = []
         for reaction_name, reaction_users in reaction_map.items():
-            reaction_texts.append(f"[{settings.KEYWARD_EMOJI} '{reaction_name}' reaction users: {','.join(reaction_users)}]")
+            reaction_texts.append(
+                f"[{settings.KEYWARD_EMOJI} '{reaction_name}' reaction users: {','.join(reaction_users)}]"
+            )
 
         return " ".join(reaction_texts)
 
     except Exception as e:
         logger.log_error("반응 정보 처리 중 오류 발생", e)
         return ""
+
 
 def replace_emoji_pattern(text: str) -> str:
     """이모지 패턴을 정리합니다.
@@ -296,6 +313,7 @@ def replace_emoji_pattern(text: str) -> str:
     result = re.sub(pattern, replacement, text)
     return result
 
+
 def replace_text(text: str) -> str:
     """텍스트 형식을 변환합니다.
 
@@ -308,6 +326,7 @@ def replace_text(text: str) -> str:
     for old, new in settings.CONVERSION_ARRAY:
         text = text.replace(old, new)
     return text
+
 
 def parse_slack_event(event: Dict[str, Any], bot_id: str) -> Dict[str, Any]:
     """Slack 이벤트를 파싱합니다.
@@ -335,5 +354,5 @@ def parse_slack_event(event: Dict[str, Any], bot_id: str) -> Dict[str, Any]:
         "user": event.get("user"),
         "client_msg_id": event.get("client_msg_id"),
         "ts": event.get("ts"),
-        "has_files": "files" in event
+        "has_files": "files" in event,
     }

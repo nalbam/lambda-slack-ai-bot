@@ -1,11 +1,17 @@
 """
 OpenAI API 래퍼 모듈
 """
+
 import functools
 from typing import List, Dict, Any, Optional, Generator, Tuple, Union
 
 from openai import OpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 import requests
 
 from src.config import settings
@@ -17,22 +23,27 @@ openai_client = OpenAI(
     api_key=settings.OPENAI_API_KEY,
 )
 
+
 class OpenAIApiError(Exception):
     """OpenAI API 오류 클래스"""
+
     pass
+
 
 # OpenAI API 호출에 재시도 데코레이터 적용
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((OpenAIApiError, requests.RequestException, ConnectionError)),
-    reraise=True
+    retry=retry_if_exception_type(
+        (OpenAIApiError, requests.RequestException, ConnectionError)
+    ),
+    reraise=True,
 )
 def generate_chat_completion(
     messages: List[Dict[str, str]],
     user: str,
     stream: bool = True,
-    temperature: float = settings.TEMPERATURE
+    temperature: float = settings.TEMPERATURE,
 ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
     """OpenAI 채팅 API를 사용하여 응답을 생성합니다.
 
@@ -54,13 +65,16 @@ def generate_chat_completion(
         if len(messages) > 10:
             log_messages = [messages[0], "...", messages[-1]]
 
-        logger.log_info(f"OpenAI API 요청", {
-            "model": settings.OPENAI_MODEL,
-            "messages_count": len(messages),
-            "user": user,
-            "stream": stream,
-            "temperature": temperature
-        })
+        logger.log_info(
+            f"OpenAI API 요청",
+            {
+                "model": settings.OPENAI_MODEL,
+                "messages_count": len(messages),
+                "user": user,
+                "stream": stream,
+                "temperature": temperature,
+            },
+        )
 
         response = openai_client.chat.completions.create(
             model=settings.OPENAI_MODEL,
@@ -69,40 +83,50 @@ def generate_chat_completion(
             stream=stream,
             user=user,
         )
-        
+
         if not stream:
-            usage = getattr(response, 'usage', None)
+            usage = getattr(response, "usage", None)
             usage_dict = None
             if usage:
                 usage_dict = {
-                    "prompt_tokens": getattr(usage, 'prompt_tokens', 0),
-                    "completion_tokens": getattr(usage, 'completion_tokens', 0),
-                    "total_tokens": getattr(usage, 'total_tokens', 0)
+                    "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                    "completion_tokens": getattr(usage, "completion_tokens", 0),
+                    "total_tokens": getattr(usage, "total_tokens", 0),
                 }
-            
-            logger.log_info("OpenAI 채팅 API 응답 수신 완료", {
-                "response_id": getattr(response, 'id', 'unknown'),
-                "usage": usage_dict
-            })
+
+            logger.log_info(
+                "OpenAI 채팅 API 응답 수신 완료",
+                {
+                    "response_id": getattr(response, "id", "unknown"),
+                    "usage": usage_dict,
+                },
+            )
         else:
             logger.log_info("OpenAI 채팅 API 스트리밍 시작")
 
         return response
 
     except Exception as e:
-        logger.log_error("OpenAI 채팅 API 호출 중 오류 발생", e, {
-            "model": settings.OPENAI_MODEL,
-            "messages_count": len(messages),
-            "user": user,
-            "stream": stream
-        })
+        logger.log_error(
+            "OpenAI 채팅 API 호출 중 오류 발생",
+            e,
+            {
+                "model": settings.OPENAI_MODEL,
+                "messages_count": len(messages),
+                "user": user,
+                "stream": stream,
+            },
+        )
         raise OpenAIApiError(f"OpenAI API 오류: {str(e)}")
+
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((OpenAIApiError, requests.RequestException, ConnectionError)),
-    reraise=True
+    retry=retry_if_exception_type(
+        (OpenAIApiError, requests.RequestException, ConnectionError)
+    ),
+    reraise=True,
 )
 def generate_image(prompt: str) -> Dict[str, Any]:
     """OpenAI DALL-E API를 사용하여 이미지를 생성합니다.
@@ -117,12 +141,15 @@ def generate_image(prompt: str) -> Dict[str, Any]:
         OpenAIApiError: API 호출 중 오류 발생 시
     """
     try:
-        logger.log_info(f"OpenAI 이미지 생성 요청", {
-            "model": settings.IMAGE_MODEL,
-            "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-            "size": settings.IMAGE_SIZE,
-            "quality": settings.IMAGE_QUALITY
-        })
+        logger.log_info(
+            f"OpenAI 이미지 생성 요청",
+            {
+                "model": settings.IMAGE_MODEL,
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "size": settings.IMAGE_SIZE,
+                "quality": settings.IMAGE_QUALITY,
+            },
+        )
 
         response = openai_client.images.generate(
             model=settings.IMAGE_MODEL,
@@ -135,18 +162,20 @@ def generate_image(prompt: str) -> Dict[str, Any]:
 
         result = {
             "image_url": response.data[0].url,
-            "revised_prompt": response.data[0].revised_prompt
+            "revised_prompt": response.data[0].revised_prompt,
         }
 
-        logger.log_debug("OpenAI 이미지 생성 성공", {
-            "revised_prompt": response.data[0].revised_prompt[:50] + "..."
-        })
+        logger.log_debug(
+            "OpenAI 이미지 생성 성공",
+            {"revised_prompt": response.data[0].revised_prompt[:50] + "..."},
+        )
 
         return result
 
     except Exception as e:
-        logger.log_error("OpenAI 이미지 생성 중 오류 발생", e, {
-            "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
-        })
+        logger.log_error(
+            "OpenAI 이미지 생성 중 오류 발생",
+            e,
+            {"prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt},
+        )
         raise OpenAIApiError(f"이미지 생성 오류: {str(e)}")
-
