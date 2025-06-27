@@ -4,3 +4,4 @@ slack-bolt>=1.18.0
 slack-sdk>=3.23.0
 requests>=2.31.0
 tenacity>=8.2.3
+google-genai>=1.22.0
