@@ -286,44 +286,61 @@ JSON만 응답하세요.
         self.update_progress(progress_ts, "✅ 모든 작업이 완료되었습니다.")
     
     def _send_task_result(self, result: Dict[str, Any], task: Dict[str, Any], progress_ts: str) -> None:
-        """작업 결과를 즉시 Slack에 전송"""
+        """작업 결과를 즉시 Slack에 새로운 메시지로 전송"""
         
         try:
             if result['type'] == 'text':
-                # 텍스트 결과를 스트리밍으로 전송
+                # 텍스트 결과를 새로운 메시지로 스트리밍 전송
+                response = self.slack_context["say"](
+                    text="💭 응답 생성 중...", 
+                    thread_ts=self.slack_context.get("thread_ts")
+                )
+                new_message_ts = response["ts"]
+                
                 messages = [{"role": "assistant", "content": result['content']}]
                 self.slack_utils.reply_text_stream(
                     messages=messages,
                     say=self.slack_context["say"],
                     channel=self.slack_context["channel"],
                     thread_ts=self.slack_context.get("thread_ts"),
-                    latest_ts=progress_ts,
+                    latest_ts=new_message_ts,  # 새로운 메시지 사용
                     user=self.slack_context.get("user_id", "unknown")
                 )
                 
             elif result['type'] == 'image':
-                # 이미지는 이미 TaskExecutor에서 Slack에 업로드됨
-                # 프롬프트 메시지만 업데이트
+                # 이미지는 이미 TaskExecutor에서 업로드됨
+                # 별도 프롬프트 메시지를 새로 전송
                 if result.get('revised_prompt'):
-                    self.update_progress(progress_ts, f"🎨 {result['revised_prompt']}")
-                else:
-                    self.update_progress(progress_ts, "🎨 이미지 생성 완료")
+                    self.slack_context["say"](
+                        text=f"🎨 {result['revised_prompt']}", 
+                        thread_ts=self.slack_context.get("thread_ts")
+                    )
                 
             elif result['type'] == 'analysis':
-                # 분석 결과를 스트리밍으로 전송
+                # 분석 결과를 새로운 메시지로 스트리밍 전송
+                response = self.slack_context["say"](
+                    text="🔍 분석 결과 전송 중...", 
+                    thread_ts=self.slack_context.get("thread_ts")
+                )
+                new_message_ts = response["ts"]
+                
                 messages = [{"role": "assistant", "content": result['content']}]
                 self.slack_utils.reply_text_stream(
                     messages=messages,
                     say=self.slack_context["say"],
                     channel=self.slack_context["channel"],
                     thread_ts=self.slack_context.get("thread_ts"),
-                    latest_ts=progress_ts,
+                    latest_ts=new_message_ts,  # 새로운 메시지 사용
                     user=self.slack_context.get("user_id", "unknown")
                 )
                 
         except Exception as e:
             logger.log_error("작업 결과 전송 실패", e)
-            self.update_progress(progress_ts, f"❌ 결과 전송 중 오류 발생: {str(e)}")
+            # 오류도 새로운 메시지로 전송
+            self.slack_context["say"](
+                text=f"❌ 작업 결과 전송 중 오류 발생: {str(e)}", 
+                thread_ts=self.slack_context.get("thread_ts")
+            )
     
     
     def update_progress(self, message_ts: str, text: str) -> None:
