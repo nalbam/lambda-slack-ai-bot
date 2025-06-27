@@ -100,30 +100,34 @@ class TaskExecutor:
                 english_prompt = task['input']
             
             # DALL-E 이미지 생성
+            logger.log_info("DALL-E 이미지 생성 시작", {"prompt": english_prompt[:100]})
             image_result = openai_api.generate_image(english_prompt)
             image_url = image_result["image_url"]
             revised_prompt = image_result["revised_prompt"]
+            logger.log_info("DALL-E 이미지 생성 완료", {"image_url_prefix": image_url[:50]})
             
-            # 이미지 다운로드 (기존 코드 방식 활용)
+            # DALL-E 이미지 다운로드 (공개 URL이므로 직접 다운로드)
             file_ext = image_url.split(".")[-1].split("?")[0]
             filename = f"{settings.IMAGE_MODEL}.{file_ext}"
             
-            file_data = slack_api.get_image_from_slack(image_url)
-            if not file_data:
-                # 직접 다운로드 시도
-                try:
-                    import requests
-                    response = requests.get(image_url)
-                    if response.status_code == 200:
-                        file_data = response.content
-                except Exception as e:
-                    logger.log_error("이미지 다운로드 중 오류 발생", e)
-                    raise Exception("이미지를 다운로드할 수 없습니다.")
+            logger.log_info("이미지 다운로드 시작", {"url_prefix": image_url[:50], "filename": filename})
+            try:
+                import requests
+                response = requests.get(image_url, timeout=30)
+                if response.status_code == 200:
+                    file_data = response.content
+                    logger.log_info("이미지 다운로드 완료", {"file_size": len(file_data)})
+                else:
+                    raise Exception(f"HTTP {response.status_code}: 이미지 다운로드 실패")
+            except Exception as e:
+                logger.log_error("DALL-E 이미지 다운로드 중 오류 발생", e)
+                raise Exception(f"이미지를 다운로드할 수 없습니다: {str(e)}")
             
             if not file_data:
-                raise Exception("이미지 다운로드 실패")
+                raise Exception("이미지 다운로드 실패: 데이터가 비어있음")
             
             # Slack에 바로 업로드
+            logger.log_info("Slack 파일 업로드 시작", {"filename": filename})
             slack_api.upload_file(
                 self.app, 
                 self.slack_context["channel"], 
@@ -131,6 +135,7 @@ class TaskExecutor:
                 filename, 
                 self.slack_context.get("thread_ts")
             )
+            logger.log_info("Slack 파일 업로드 완료", {"filename": filename})
             
             logger.log_info("이미지 생성 및 업로드 완료", {
                 "task_id": task['id'],
