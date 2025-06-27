@@ -1,11 +1,10 @@
 """
 Lambda Slack AI Bot - Lambda 핸들러
-5단계 워크플로우 엔진 통합 완료:
+4단계 워크플로우 엔진 통합 완료:
 1. 사용자 의도 파악 (OpenAI 분석)
 2. 작업 나열 (실행 계획 수립)
-3. 작업 처리 (순차 실행)
-4. 작업 취합 (결과 통합)
-5. 회신 (포맷팅 및 전송)
+3. 작업 처리 및 즉시 회신 (AI 요약 없이 직접 전송)
+4. 완료 알림
 """
 import json
 import sys
@@ -39,7 +38,7 @@ bot_id = slack_api.get_bot_id(app)
 # 이벤트 핸들러 등록
 @app.event("app_mention")
 def handle_mention(body: Dict[str, Any], say):
-    """앱 멘션 이벤트 핸들러 - 5단계 워크플로우 지원"""
+    """앱 멘션 이벤트 핸들러 - 4단계 워크플로우 지원"""
     try:
         event = body.get("event", {})
         logger.log_info("앱 멘션 이벤트 처리", {
@@ -53,7 +52,7 @@ def handle_mention(body: Dict[str, Any], say):
 
 @app.event("message")
 def handle_message(body: Dict[str, Any], say):
-    """메시지 이벤트 핸들러 - 5단계 워크플로우 지원"""
+    """메시지 이벤트 핸들러 - 4단계 워크플로우 지원"""
     try:
         event = body.get("event", {})
 

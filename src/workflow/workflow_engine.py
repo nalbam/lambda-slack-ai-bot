@@ -1,5 +1,5 @@
 """
-5단계 워크플로우 엔진
+4단계 워크플로우 엔진 - 작업 취합 단계 제거
 """
 import json
 import re
@@ -13,7 +13,7 @@ from .slack_utils import SlackMessageUtils
 
 
 class WorkflowEngine:
-    """5단계 워크플로우 처리 엔진"""
+    """4단계 워크플로우 처리 엔진"""
     
     def __init__(self, app, slack_context: Dict[str, Any]):
         self.app = app
@@ -22,7 +22,7 @@ class WorkflowEngine:
         self.slack_utils = SlackMessageUtils(app)
     
     def process_user_request(self, user_message: str, context: Dict[str, Any]) -> None:
-        """5단계 워크플로우 메인 처리 함수"""
+        """4단계 워크플로우 메인 처리 함수"""
         
         try:
             # 진행 상황 알림
@@ -43,22 +43,12 @@ class WorkflowEngine:
             # 진행 상황 업데이트
             self.update_progress(latest_ts, f"📋 {len(task_list)}개 작업을 처리합니다...")
             
-            # 3단계: 작업 처리
-            logger.log_info("3단계: 작업 처리 시작")
-            task_results = self.execute_tasks(task_list, latest_ts)
-            
-            # 4단계: 작업 취합
-            logger.log_info("4단계: 작업 취합 시작")
-            aggregated_results = self.aggregate_results(task_results, intent_data)
-            
-            # 5단계: 회신
-            logger.log_info("5단계: 최종 회신 시작")
-            self.send_final_response(aggregated_results, latest_ts)
+            # 3단계: 작업 처리 및 즉시 회신
+            logger.log_info("3단계: 작업 처리 및 회신 시작")
+            self.execute_and_respond_tasks(task_list, latest_ts)
             
             logger.log_info("워크플로우 처리 완료", {
-                "total_tasks": len(task_list),
-                "successful": aggregated_results['summary']['successful'],
-                "failed": aggregated_results['summary']['failed']
+                "total_tasks": len(task_list)
             })
             
         except Exception as e:
@@ -265,10 +255,8 @@ JSON만 응답하세요.
         
         return sorted_tasks
     
-    def execute_tasks(self, task_list: List[Dict[str, Any]], progress_ts: str) -> Dict[str, Any]:
-        """3단계: 작업들을 순차적으로 실행"""
-        
-        results = {}
+    def execute_and_respond_tasks(self, task_list: List[Dict[str, Any]], progress_ts: str) -> None:
+        """3단계: 작업들을 순차적으로 실행하고 즉시 회신"""
         
         for i, task in enumerate(task_list):
             try:
@@ -277,177 +265,70 @@ JSON만 응답하세요.
                 self.update_progress(progress_ts, progress)
                 
                 # 작업 실행
-                task['status'] = 'running'
                 start_time = time.time()
-                
                 result = self.task_executor.execute_single_task(task)
+                execution_time = time.time() - start_time
                 
-                task['status'] = 'completed'
-                task['result'] = result
-                task['execution_time'] = time.time() - start_time
-                results[task['id']] = task
+                # 즉시 결과 회신
+                self._send_task_result(result, task, progress_ts)
                 
-                logger.log_info(f"작업 {task['id']} 완료", {
+                logger.log_info(f"작업 {task['id']} 완료 및 회신", {
                     "type": task['type'],
-                    "time": task['execution_time']
+                    "time": execution_time
                 })
                 
             except Exception as e:
-                task['status'] = 'failed'
-                task['error'] = str(e)
-                task['execution_time'] = time.time() - start_time if 'start_time' in locals() else 0
-                results[task['id']] = task
                 logger.log_error(f"작업 {task['id']} 실패", e)
+                # 에러 메시지 즉시 전송
+                self.update_progress(progress_ts, f"❌ {task['description']} 처리 중 오류 발생: {str(e)}")
         
-        return results
+        # 모든 작업 완료 메시지
+        self.update_progress(progress_ts, "✅ 모든 작업이 완료되었습니다.")
     
-    def aggregate_results(self, task_results: Dict[str, Any], intent_data: Dict[str, Any]) -> Dict[str, Any]:
-        """4단계: 작업 결과들을 통합"""
-        
-        successful_tasks = {k: v for k, v in task_results.items() if v['status'] == 'completed'}
-        failed_tasks = {k: v for k, v in task_results.items() if v['status'] == 'failed'}
-        
-        # 결과 타입별 분류
-        text_results = []
-        image_results = []
-        analysis_results = []
-        
-        for task_id, task in successful_tasks.items():
-            if not task.get('result'):
-                continue
-                
-            result = task['result']
-            
-            if result['type'] == 'text':
-                text_results.append({
-                    'content': result['content'],
-                    'description': task['description']
-                })
-            elif result['type'] == 'image':
-                image_results.append({
-                    'image_data': result['image_data'],
-                    'prompt': result['revised_prompt'],
-                    'description': task['description']
-                })
-            elif result['type'] == 'analysis':
-                analysis_results.append({
-                    'content': result['content'],
-                    'description': task['description']
-                })
-        
-        return {
-            'original_intent': intent_data['user_intent'],
-            'results': {
-                'text_content': text_results,
-                'images': image_results,
-                'analyses': analysis_results
-            },
-            'summary': {
-                'total_tasks': len(task_results),
-                'successful': len(successful_tasks),
-                'failed': len(failed_tasks)
-            },
-            'errors': [{'description': task['description'], 'error': task['error']} 
-                      for task in failed_tasks.values()]
-        }
-    
-    def send_final_response(self, aggregated_results: Dict[str, Any], message_ts: str) -> None:
-        """5단계: 최종 응답 생성 및 전송 - 스트리밍 지원"""
+    def _send_task_result(self, result: Dict[str, Any], task: Dict[str, Any], progress_ts: str) -> None:
+        """작업 결과를 즉시 Slack에 전송"""
         
         try:
-            # OpenAI에게 결과 정리 요청 (스트리밍 사용)
-            summary_prompt = self.create_response_summary_prompt(aggregated_results)
-            
-            messages = [{"role": "user", "content": summary_prompt}]
-            
-            # 스트리밍으로 최종 응답 생성
-            final_text = self.slack_utils.reply_text_stream(
-                messages=messages,
-                say=self.slack_context["say"],
-                channel=self.slack_context["channel"],
-                thread_ts=self.slack_context.get("thread_ts"),
-                latest_ts=message_ts,
-                user="response_generator"
-            )
-            
-        except Exception as e:
-            logger.log_error("응답 스트리밍 실패", e)
-            # Fallback 응답
-            final_text = self.create_simple_summary(aggregated_results)
-            slack_api.update_message(
-                self.app, 
-                self.slack_context["channel"], 
-                message_ts, 
-                final_text
-            )
-        
-        # 이미지들 업로드
-        for i, image in enumerate(aggregated_results['results']['images']):
-            try:
+            if result['type'] == 'text':
+                # 텍스트 결과를 스트리밍으로 전송
+                messages = [{"role": "assistant", "content": result['content']}]
+                self.slack_utils.reply_text_stream(
+                    messages=messages,
+                    say=self.slack_context["say"],
+                    channel=self.slack_context["channel"],
+                    thread_ts=self.slack_context.get("thread_ts"),
+                    latest_ts=progress_ts,
+                    user=self.slack_context.get("user_id", "unknown")
+                )
+                
+            elif result['type'] == 'image':
+                # 이미지 결과를 즉시 업로드
                 self.slack_utils.upload_image_to_slack(
                     say=self.slack_context["say"],
                     channel=self.slack_context["channel"],
                     thread_ts=self.slack_context.get("thread_ts"),
-                    latest_ts=message_ts,
-                    image_data=image['image_data'],
-                    filename=f"generated_{i+1}.png",
-                    prompt=f"🎨 이미지 {i+1}: {image.get('prompt', '생성 완료')}"
+                    latest_ts=progress_ts,
+                    image_data=result['image_data'],
+                    filename=f"{task['id']}.png",
+                    prompt=f"🎨 {result.get('revised_prompt', '이미지 생성 완료')}"
                 )
-            except Exception as e:
-                logger.log_error(f"이미지 {i+1} 업로드 실패", e)
+                
+            elif result['type'] == 'analysis':
+                # 분석 결과를 스트리밍으로 전송
+                messages = [{"role": "assistant", "content": result['content']}]
+                self.slack_utils.reply_text_stream(
+                    messages=messages,
+                    say=self.slack_context["say"],
+                    channel=self.slack_context["channel"],
+                    thread_ts=self.slack_context.get("thread_ts"),
+                    latest_ts=progress_ts,
+                    user=self.slack_context.get("user_id", "unknown")
+                )
+                
+        except Exception as e:
+            logger.log_error("작업 결과 전송 실패", e)
+            self.update_progress(progress_ts, f"❌ 결과 전송 중 오류 발생: {str(e)}")
     
-    def create_response_summary_prompt(self, results: Dict[str, Any]) -> str:
-        """응답 정리를 위한 프롬프트 생성"""
-        
-        text_content = results['results']['text_content']
-        images = results['results']['images']
-        analyses = results['results']['analyses']
-        errors = results['errors']
-        
-        prompt = f"""
-다음은 사용자 요청 "{results['original_intent']}"에 대한 처리 결과입니다:
-
-텍스트 결과:
-{chr(10).join([f"- {item['description']}: {item['content'][:300]}..." for item in text_content])}
-
-이미지 결과:
-{chr(10).join([f"- {item['description']}: 이미지 생성됨 (프롬프트: {item['prompt']})" for item in images])}
-
-분석 결과:
-{chr(10).join([f"- {item['description']}: {item['content'][:300]}..." for item in analyses])}
-
-오류:
-{chr(10).join([f"- {error['description']}: {error['error']}" for error in errors]) if errors else "없음"}
-
-이 결과들을 사용자에게 친근하고 이해하기 쉽게 정리해서 하나의 통합된 응답으로 만들어주세요.
-이미지가 생성되었다면 "이미지를 생성했습니다"라고 언급하고, 별도로 업로드된다고 설명하세요.
-오류가 있다면 자연스럽게 언급하되 과도하게 강조하지 마세요.
-"""
-        
-        return prompt
-    
-    def create_simple_summary(self, results: Dict[str, Any]) -> str:
-        """간단한 응답 요약 (fallback)"""
-        
-        parts = []
-        
-        # 텍스트 결과
-        for item in results['results']['text_content']:
-            parts.append(item['content'])
-        
-        # 이미지 결과
-        if results['results']['images']:
-            parts.append(f"{len(results['results']['images'])}개의 이미지를 생성했습니다.")
-        
-        # 분석 결과  
-        for item in results['results']['analyses']:
-            parts.append(item['content'])
-        
-        # 오류 언급
-        if results['errors']:
-            parts.append(f"일부 작업에서 오류가 발생했습니다: {len(results['errors'])}개 작업 실패")
-        
-        return "\n\n".join(parts) if parts else "요청을 처리했지만 결과를 생성할 수 없었습니다."
     
     def update_progress(self, message_ts: str, text: str) -> None:
         """진행 상황 업데이트"""

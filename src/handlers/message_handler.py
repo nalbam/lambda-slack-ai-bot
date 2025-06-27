@@ -1,5 +1,5 @@
 """
-새로운 Slack 메시지 처리 핸들러 - 워크플로우 중심 설계
+새로운 Slack 메시지 처리 핸들러 - 4단계 워크플로우 중심 설계
 """
 from typing import Dict, Any, List
 
@@ -10,7 +10,7 @@ from src.api import slack_api
 
 
 class MessageHandler:
-    """5단계 워크플로우 중심의 Slack 메시지 처리 핸들러"""
+    """4단계 워크플로우 중심의 Slack 메시지 처리 핸들러"""
 
     def __init__(self, app: App):
         """
