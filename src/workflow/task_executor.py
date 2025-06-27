@@ -445,22 +445,74 @@ class TaskExecutor:
                 "generated_images_count": len(response.get('generated_images', []))
             })
             
-            # 성공한 경우 이미지 처리
-            if response.get('images') and len(response['images']) > 0:
+            # 성공한 경우 이미지 처리 - generated_images 우선 확인
+            image_data = None
+            image_source = None
+            
+            if response.get('generated_images') and len(response['generated_images']) > 0:
+                image_data = response['generated_images'][0]
+                image_source = 'generated_images'
+            elif response.get('images') and len(response['images']) > 0:
                 image_data = response['images'][0]
-                
+                image_source = 'images'
+            elif response.get('candidates') and len(response['candidates']) > 0:
+                image_data = response['candidates'][0]
+                image_source = 'candidates'
+            
+            if image_data:
                 logger.log_info("Gemini 이미지 생성 완료", {
                     "task_id": task['id'],
                     "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt,
-                    "image_data_type": type(image_data).__name__
+                    "image_data_type": type(image_data).__name__,
+                    "image_source": image_source,
+                    "has_image_bytes": hasattr(image_data, 'image_bytes')
                 })
                 
-                return {
-                    'type': 'image',
-                    'image_data': image_data,
-                    'prompt': prompt,
-                    'model': 'imagen-3.0'
-                }
+                # 이미지 바이트 데이터 추출 및 Slack 업로드
+                try:
+                    if hasattr(image_data, 'image_bytes') and image_data.image_bytes:
+                        file_data = image_data.image_bytes
+                        filename = f"gemini_{settings.GEMINI_IMAGE_MODEL}.png"
+                        
+                        logger.log_info("Gemini 이미지 Slack 업로드 시작", {
+                            "task_id": task['id'],
+                            "filename": filename,
+                            "file_size": len(file_data)
+                        })
+                        
+                        # Slack에 바로 업로드
+                        slack_api.upload_file(
+                            self.app, 
+                            self.slack_context["channel"], 
+                            file_data, 
+                            filename, 
+                            self.slack_context.get("thread_ts")
+                        )
+                        
+                        logger.log_info("Gemini 이미지 Slack 업로드 완료", {
+                            "task_id": task['id'],
+                            "filename": filename
+                        })
+                        
+                        return {
+                            'type': 'image',
+                            'uploaded': True,
+                            'prompt': prompt,
+                            'filename': filename,
+                            'model': settings.GEMINI_IMAGE_MODEL
+                        }
+                    else:
+                        logger.log_error("Gemini 이미지 데이터에 image_bytes가 없음", None, {
+                            "task_id": task['id'],
+                            "image_data_attributes": [attr for attr in dir(image_data) if not attr.startswith('_')]
+                        })
+                        raise Exception("이미지 바이트 데이터를 찾을 수 없습니다")
+                        
+                except Exception as upload_error:
+                    logger.log_error("Gemini 이미지 업로드 실패", upload_error, {
+                        "task_id": task['id']
+                    })
+                    raise upload_error
             else:
                 logger.log_warning("Gemini 이미지 생성 응답에 이미지가 없음", {
                     "task_id": task['id'],
@@ -484,9 +536,13 @@ class TaskExecutor:
             error_message = str(e).lower()
             if any(keyword in error_message for keyword in [
                 "allowlist", "not enabled", "not supported", "생성된 이미지가 없습니다",
-                "no images", "empty response", "403", "unauthorized", "invalid_argument"
+                "no images", "empty response", "403", "unauthorized", "invalid_argument",
+                "이미지 바이트 데이터를 찾을 수 없습니다"
             ]):
-                logger.log_info("DALL-E 3으로 자동 대체 실행")
+                logger.log_info("DALL-E 3으로 자동 대체 실행", {
+                    "task_id": task['id'],
+                    "gemini_error": str(e)
+                })
                 try:
                     return self._execute_image_generation(task)
                 except Exception as dalle_error:
@@ -498,7 +554,10 @@ class TaskExecutor:
                     }
             else:
                 # 예상치 못한 오류도 DALL-E로 대체 시도
-                logger.log_info("예상치 못한 Gemini 오류, DALL-E로 대체 시도")
+                logger.log_info("예상치 못한 Gemini 오류, DALL-E로 대체 시도", {
+                    "task_id": task['id'],
+                    "error_type": type(e).__name__
+                })
                 try:
                     return self._execute_image_generation(task)
                 except Exception as dalle_error:
