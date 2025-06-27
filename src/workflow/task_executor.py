@@ -32,6 +32,8 @@ class TaskExecutor:
             return self._execute_image_generation(task)
         elif task_type == 'image_analysis':
             return self._execute_image_analysis(task)
+        elif task_type == 'thread_summary':
+            return self._execute_thread_summary(task)
         else:
             raise ValueError(f"지원하지 않는 작업 타입: {task_type}")
     
@@ -230,3 +232,108 @@ class TaskExecutor:
                 return False
         
         return True
+    
+    def _execute_thread_summary(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """스레드 요약 실행 - 스레드 내 모든 메시지 요약"""
+        
+        try:
+            # 스레드 정보 확인
+            thread_ts = self.slack_context.get("thread_ts")
+            if not thread_ts:
+                # 스레드가 아닌 경우 단일 메시지 응답
+                return {
+                    'type': 'text',
+                    'content': "현재 스레드가 아니므로 요약할 내용이 없습니다. 스레드 내에서 요약을 요청해주세요.",
+                }
+            
+            # 스레드 메시지 가져오기
+            from src.api import slack_api
+            
+            channel = self.slack_context["channel"]
+            thread_messages = slack_api.get_thread_messages(
+                self.app, 
+                channel, 
+                thread_ts
+            )
+            
+            if not thread_messages or len(thread_messages) == 0:
+                return {
+                    'type': 'text', 
+                    'content': "요약할 스레드 메시지가 없습니다.",
+                }
+            
+            # 메시지들을 텍스트로 변환
+            conversation_text = self._format_thread_messages(thread_messages)
+            
+            # 요약 프롬프트 생성
+            summary_prompt = f"""
+다음은 Slack 스레드 대화입니다. 이 대화를 간결하고 명확하게 요약해주세요:
+
+{conversation_text}
+
+요약 요구사항:
+1. 주요 주제와 핵심 내용을 포함
+2. 중요한 결정사항이나 결론이 있다면 강조
+3. 참여자들의 주요 의견이나 관점 반영
+4. 3-5개 문단으로 간결하게 정리
+5. 한국어로 응답
+
+요약:
+"""
+            
+            # OpenAI API 호출하여 요약 생성
+            response = openai_api.generate_chat_completion(
+                messages=[{"role": "user", "content": summary_prompt}],
+                user=self.slack_context.get('user_id', 'unknown'),
+                stream=False
+            )
+            
+            summary_content = response.choices[0].message.content
+            
+            logger.log_info("스레드 요약 완료", {
+                "task_id": task['id'],
+                "message_count": len(thread_messages),
+                "summary_length": len(summary_content)
+            })
+            
+            return {
+                'type': 'text',
+                'content': f"📋 **스레드 요약** ({len(thread_messages)}개 메시지)\n\n{summary_content}",
+                'message_count': len(thread_messages)
+            }
+            
+        except Exception as e:
+            logger.log_error("스레드 요약 실패", e, {"task_id": task['id']})
+            raise e
+    
+    def _format_thread_messages(self, messages: List[Dict[str, Any]]) -> str:
+        """스레드 메시지들을 요약하기 쉬운 형태로 포맷팅"""
+        
+        formatted_messages = []
+        
+        for i, message in enumerate(messages):
+            # 사용자 정보
+            user_id = message.get('user', 'unknown')
+            
+            # 봇 메시지인지 확인
+            if message.get('bot_id'):
+                user_name = "AI Bot"
+            else:
+                try:
+                    from src.api import slack_api
+                    user_name = slack_api.get_user_display_name(self.app, user_id)
+                except:
+                    user_name = "User"
+            
+            # 메시지 텍스트
+            text = message.get('text', '').strip()
+            if not text:
+                continue
+                
+            # 타임스탬프
+            timestamp = message.get('ts', '')
+            
+            # 메시지 포맷팅
+            formatted_messages.append(f"[{i+1}] {user_name}: {text}")
+        
+        return "\n".join(formatted_messages)

@@ -78,7 +78,7 @@ class WorkflowEngine:
     "required_tasks": [
         {{
             "task_id": "unique_id",
-            "task_type": "text_generation|image_generation|image_analysis",
+            "task_type": "text_generation|image_generation|image_analysis|thread_summary",
             "description": "작업 설명",
             "input_data": "작업 입력",
             "priority": 1-10,
@@ -93,6 +93,7 @@ class WorkflowEngine:
 - "파이썬 설명해줘" → text_generation 작업 1개
 - "고양이 그려줘" → image_generation 작업 1개  
 - "AI 설명하고 로봇 이미지도 그려줘" → text_generation + image_generation 작업 2개
+- "스레드 요약해줘" → thread_summary 작업 1개
 
 JSON만 응답하세요.
 """
@@ -166,6 +167,20 @@ JSON만 응답하세요.
                 }],
                 "execution_strategy": "sequential",
                 "estimated_time": "10"
+            }
+        elif any(keyword in user_message for keyword in ["요약", "summarize", "summary"]):
+            return {
+                "user_intent": "스레드 요약 요청",
+                "required_tasks": [{
+                    "task_id": "fallback_thread_summary",
+                    "task_type": "thread_summary",
+                    "description": "스레드 메시지 요약",
+                    "input_data": user_message,
+                    "priority": 1,
+                    "depends_on": []
+                }],
+                "execution_strategy": "sequential",
+                "estimated_time": "8"
             }
         elif any(keyword in user_message for keyword in ["그려", "그림", "이미지", "생성"]):
             return {
@@ -377,6 +392,11 @@ JSON만 응답하세요.
    - 차트, 그래프 분석
    - 코드 스크린샷 해석
    - 문서 이미지 읽기
+
+4. 스레드 요약
+   - 스레드 내 모든 메시지 분석 및 요약
+   - 주요 주제 및 결론 추출
+   - 참여자별 의견 정리
 """
     
     def handle_workflow_error(self, error: Exception, user_message: str, context: Dict[str, Any]) -> None:
