@@ -21,6 +21,12 @@ OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"].strip()
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"].strip()
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o").strip()
 
+# Gemini 설정
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"].strip()
+GEMINI_TEXT_MODEL = os.environ.get("GEMINI_TEXT_MODEL", "gemini-2.5-flash").strip()
+GEMINI_IMAGE_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-4.0-generate-preview-06-06").strip()
+GEMINI_VIDEO_MODEL = os.environ.get("GEMINI_VIDEO_MODEL", "veo-2.0-generate-001").strip()
+
 # 이미지 생성 설정
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3").strip()
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "hd").strip()  # standard, hd
