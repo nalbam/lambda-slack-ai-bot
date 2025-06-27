@@ -22,7 +22,10 @@ def log_info(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
         extra: 추가 로그 데이터 (딕셔너리)
     """
     if extra:
-        logger.info(f"{message} - {json.dumps(extra)}")
+        try:
+            logger.info(f"{message} - {json.dumps(extra, default=str)}")
+        except (TypeError, ValueError) as e:
+            logger.info(f"{message} - {str(extra)} (JSON serialization failed: {str(e)})")
     else:
         logger.info(message)
 
@@ -36,12 +39,18 @@ def log_error(message: str, error: Optional[Exception] = None, extra: Optional[D
     """
     if error:
         if extra:
-            logger.error(f"{message}: {str(error)} - {json.dumps(extra)}", exc_info=True)
+            try:
+                logger.error(f"{message}: {str(error)} - {json.dumps(extra, default=str)}", exc_info=True)
+            except (TypeError, ValueError):
+                logger.error(f"{message}: {str(error)} - {str(extra)}", exc_info=True)
         else:
             logger.error(f"{message}: {str(error)}", exc_info=True)
     else:
         if extra:
-            logger.error(f"{message} - {json.dumps(extra)}")
+            try:
+                logger.error(f"{message} - {json.dumps(extra, default=str)}")
+            except (TypeError, ValueError):
+                logger.error(f"{message} - {str(extra)}")
         else:
             logger.error(message)
 
@@ -53,7 +62,10 @@ def log_debug(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
         extra: 추가 로그 데이터 (딕셔너리)
     """
     if extra:
-        logger.debug(f"{message} - {json.dumps(extra)}")
+        try:
+            logger.debug(f"{message} - {json.dumps(extra, default=str)}")
+        except (TypeError, ValueError):
+            logger.debug(f"{message} - {str(extra)}")
     else:
         logger.debug(message)
 
@@ -65,6 +77,9 @@ def log_warning(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
         extra: 추가 로그 데이터 (딕셔너리)
     """
     if extra:
-        logger.warning(f"{message} - {json.dumps(extra)}")
+        try:
+            logger.warning(f"{message} - {json.dumps(extra, default=str)}")
+        except (TypeError, ValueError):
+            logger.warning(f"{message} - {str(extra)}")
     else:
         logger.warning(message)

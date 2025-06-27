@@ -71,9 +71,18 @@ def generate_chat_completion(
         )
         
         if not stream:
+            usage = getattr(response, 'usage', None)
+            usage_dict = None
+            if usage:
+                usage_dict = {
+                    "prompt_tokens": getattr(usage, 'prompt_tokens', 0),
+                    "completion_tokens": getattr(usage, 'completion_tokens', 0),
+                    "total_tokens": getattr(usage, 'total_tokens', 0)
+                }
+            
             logger.log_info("OpenAI 채팅 API 응답 수신 완료", {
                 "response_id": getattr(response, 'id', 'unknown'),
-                "usage": getattr(response, 'usage', None)
+                "usage": usage_dict
             })
         else:
             logger.log_info("OpenAI 채팅 API 스트리밍 시작")
