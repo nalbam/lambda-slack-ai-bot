@@ -275,7 +275,6 @@ class GeminiAPI:
             # Veo 비디오 생성 설정
             config = types.GenerateVideosConfig(
                 number_of_videos=1,
-                fps=24,
                 duration_seconds=duration_seconds,
                 enhance_prompt=True,
                 aspect_ratio=aspect_ratio
