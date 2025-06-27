@@ -1,9 +1,9 @@
-name: Deploy to AWS Lambda - v2
+name: Deploy to AWS Lambda - dev
 
 on:
   push:
     branches:
-      - v2
+      - dev
   repository_dispatch:
     types:
       - deploy
@@ -12,7 +12,7 @@ env:
   AWS_REGION: "us-east-1"
   AWS_ROLE_NAME: "lambda-slack-ai-bot"
 
-  STAGE: "v2"
+  STAGE: "dev"
 
   BOT_CURSOR: ${{ vars.BOT_CURSOR }}
   OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
