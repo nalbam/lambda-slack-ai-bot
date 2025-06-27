@@ -447,33 +447,46 @@ class MessageHandler:
             self.chat_update(say, channel, thread_ts, latest_ts, error_message)
 
     def handle_mention(self, body: Dict[str, Any], say: Say) -> None:
-        """앱 멘션 이벤트 핸들러입니다.
+        """앱 멘션 이벤트 핸들러 - 워크플로우 엔진 통합
 
         Args:
             body: 이벤트 본문
             say: Slack Say 객체
         """
         event = body.get("event", {})
-
-        # 이벤트 파싱
         parsed_event = slack_api.parse_slack_event(event, self.bot_id)
-        thread_ts = parsed_event["thread_ts"]
-        text = parsed_event["text"]
-        channel = parsed_event["channel"]
-        user = parsed_event["user"]
-        client_msg_id = parsed_event["client_msg_id"]
-
-        # 메시지 콘텐츠 준비
-        content, content_type = self.content_from_message(text, event, user)
-
-        # 이미지 생성 또는 대화 처리
-        if content_type == "image":
-            self.image_generate(say, thread_ts, content, channel, client_msg_id, content_type)
-        else:
-            self.conversation(say, thread_ts, content, channel, user, client_msg_id, content_type)
+        
+        try:
+            # 워크플로우 엔진 사용 여부 결정
+            if self.should_use_workflow(parsed_event["text"], event):
+                
+                # 컨텍스트 준비
+                context = self.prepare_workflow_context(parsed_event, event)
+                
+                # Slack 컨텍스트 준비
+                slack_context = {
+                    'app': self.app,
+                    'say': say,
+                    'channel': parsed_event["channel"],
+                    'thread_ts': parsed_event["thread_ts"],
+                    'user_id': parsed_event["user"]
+                }
+                
+                # 워크플로우 엔진으로 처리
+                from src.workflow.workflow_engine import WorkflowEngine
+                engine = WorkflowEngine(self.app, slack_context)
+                engine.process_user_request(parsed_event["text"], context)
+                
+            else:
+                # 기존 방식으로 처리
+                self.handle_with_existing_method(body, say)
+                
+        except Exception as e:
+            logger.log_error("Enhanced handler failed, using fallback", e)
+            self.handle_with_existing_method(body, say)
 
     def handle_message(self, body: Dict[str, Any], say: Say) -> None:
-        """다이렉트 메시지 이벤트 핸들러입니다.
+        """다이렉트 메시지 이벤트 핸들러 - 워크플로우 엔진 통합
 
         Args:
             body: 이벤트 본문
@@ -487,17 +500,142 @@ class MessageHandler:
 
         # 이벤트 파싱
         parsed_event = slack_api.parse_slack_event(event, self.bot_id)
+        
+        try:
+            # 워크플로우 엔진 사용 여부 결정
+            if self.should_use_workflow(parsed_event["text"], event):
+                
+                # 컨텍스트 준비 (DM은 스레드 없음)
+                context = self.prepare_workflow_context(parsed_event, event)
+                
+                # Slack 컨텍스트 준비
+                slack_context = {
+                    'app': self.app,
+                    'say': say,
+                    'channel': parsed_event["channel"],
+                    'thread_ts': None,  # DM은 스레드 없음
+                    'user_id': parsed_event["user"]
+                }
+                
+                # 워크플로우 엔진으로 처리
+                from src.workflow.workflow_engine import WorkflowEngine
+                engine = WorkflowEngine(self.app, slack_context)
+                engine.process_user_request(parsed_event["text"], context)
+                
+            else:
+                # 기존 방식으로 처리
+                self.handle_dm_with_existing_method(body, say)
+                
+        except Exception as e:
+            logger.log_error("Enhanced DM handler failed, using fallback", e)
+            self.handle_dm_with_existing_method(body, say)
+    
+    def should_use_workflow(self, text: str, event: Dict[str, Any]) -> bool:
+        """워크플로우 엔진 사용 여부 결정"""
+        
+        # 복합 요청 키워드 감지
+        image_keywords = ["그려", "그림", "이미지", "생성", "만들어"]
+        text_keywords = ["설명", "요약", "분석", "작성", "알려", "써줘", "해줘"]
+        
+        has_image_request = any(word in text for word in image_keywords)
+        has_text_request = any(word in text for word in text_keywords)
+        
+        # 복합 요청이거나 복잡한 요청인 경우 워크플로우 사용
+        is_complex_request = (has_image_request and has_text_request) or len(text.split()) > 15
+        
+        # 이미지가 첨부되고 분석 요청인 경우도 워크플로우 사용
+        has_uploaded_image = "files" in event
+        is_analysis_request = any(word in text for word in ["분석", "해석", "설명", "뭐야", "무엇"])
+        
+        return is_complex_request or (has_uploaded_image and is_analysis_request)
+    
+    def prepare_workflow_context(self, parsed_event: Dict[str, Any], event: Dict[str, Any]) -> Dict[str, Any]:
+        """워크플로우를 위한 컨텍스트 준비"""
+        
+        context = {
+            'user_id': parsed_event["user"],
+            'user_name': slack_api.get_user_display_name(self.app, parsed_event["user"]),
+            'client_msg_id': parsed_event["client_msg_id"],
+            'thread_length': 0,
+            'uploaded_image': None,
+            'thread_messages': []
+        }
+        
+        # 스레드 컨텍스트 준비
+        if parsed_event["thread_ts"]:
+            try:
+                thread_messages = self.process_thread_messages(
+                    parsed_event["channel"], 
+                    parsed_event["thread_ts"], 
+                    parsed_event["client_msg_id"]
+                )
+                context['thread_messages'] = thread_messages
+                context['thread_length'] = len(thread_messages)
+            except Exception as e:
+                logger.log_error("스레드 컨텍스트 준비 실패", e)
+        
+        # 업로드된 이미지 처리
+        if "files" in event:
+            files = event.get("files", [])
+            for file in files:
+                mimetype = file.get("mimetype", "")
+                if mimetype and mimetype.startswith("image"):
+                    # 이미지 정보 저장
+                    context['uploaded_image'] = {
+                        'url': file.get("url_private"),
+                        'mimetype': mimetype,
+                        'name': file.get("name", "image.png")
+                    }
+                    
+                    # base64 인코딩 시도
+                    try:
+                        base64_data = slack_api.get_encoded_image_from_slack(file.get("url_private"))
+                        if base64_data:
+                            context['uploaded_image']['base64'] = base64_data
+                    except Exception as e:
+                        logger.log_error("이미지 인코딩 실패", e)
+                    
+                    break  # 첫 번째 이미지만 처리
+        
+        return context
+    
+    def handle_with_existing_method(self, body: Dict[str, Any], say: Say) -> None:
+        """기존 방식으로 처리 (fallback)"""
+        
+        event = body.get("event", {})
+        parsed_event = slack_api.parse_slack_event(event, self.bot_id)
+        
+        # 메시지 콘텐츠 준비
+        content, content_type = self.content_from_message(
+            parsed_event["text"], event, parsed_event["user"]
+        )
+        
+        # 기존 로직으로 처리
+        if content_type == "image":
+            self.image_generate(say, parsed_event["thread_ts"], content, 
+                              parsed_event["channel"], parsed_event["client_msg_id"], content_type)
+        else:
+            self.conversation(say, parsed_event["thread_ts"], content, 
+                            parsed_event["channel"], parsed_event["user"], 
+                            parsed_event["client_msg_id"], content_type)
+    
+    def handle_dm_with_existing_method(self, body: Dict[str, Any], say: Say) -> None:
+        """DM을 기존 방식으로 처리 (fallback)"""
+        
+        event = body.get("event", {})
+        parsed_event = slack_api.parse_slack_event(event, self.bot_id)
+        
         text = parsed_event["text"]
         channel = parsed_event["channel"]
         user = parsed_event["user"]
         client_msg_id = parsed_event["client_msg_id"]
-
+        
         # DM은 스레드 없음
         thread_ts = None
-
+        
         # 메시지 콘텐츠 준비
         content, content_type = self.content_from_message(text, event, user)
-
+        
         # 이미지 생성 또는 대화 처리
         if content_type == "image":
             self.image_generate(say, thread_ts, content, channel, client_msg_id, content_type)

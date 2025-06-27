@@ -8,27 +8,27 @@ from typing import Optional, Dict, Any
 STAGE = os.environ.get("STAGE", "dev")
 
 # Slack 설정
-SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
-SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
-BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:")
+SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"].strip()
+SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"].strip()
+BOT_CURSOR = os.environ.get("BOT_CURSOR", ":robot_face:").strip()
 
 # DynamoDB 설정
-BASE_NAME = os.environ.get("BASE_NAME", "slack-ai-bot")
-DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", f"{BASE_NAME}-{STAGE}")
+BASE_NAME = os.environ.get("BASE_NAME", "slack-ai-bot").strip()
+DYNAMODB_TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME", f"{BASE_NAME}-{STAGE}").strip()
 
 # OpenAI 설정
-OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID", None)
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+OPENAI_ORG_ID = os.environ["OPENAI_ORG_ID"].strip()
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"].strip()
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o").strip()
 
 # 이미지 생성 설정
-IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3")
-IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "hd")  # standard, hd
-IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024")
-IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid")  # vivid, natural
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3").strip()
+IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "hd").strip()  # standard, hd
+IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024").strip()
+IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid").strip()  # vivid, natural
 
 # 시스템 메시지
-SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None")
+SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None").strip()
 
 # 생성 설정
 TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
@@ -38,8 +38,8 @@ MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
 # 키워드
-KEYWARD_IMAGE = os.environ.get("KEYWARD_IMAGE", "그려줘")
-KEYWARD_EMOJI = os.environ.get("KEYWARD_EMOJI", "이모지")
+KEYWARD_IMAGE = os.environ.get("KEYWARD_IMAGE", "그려줘").strip()
+KEYWARD_EMOJI = os.environ.get("KEYWARD_EMOJI", "이모지").strip()
 
 # 메시지 템플릿
 MSG_PREVIOUS = f"이전 대화 내용 확인 중... {BOT_CURSOR}"
