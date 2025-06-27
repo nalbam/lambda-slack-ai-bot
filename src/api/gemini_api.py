@@ -172,39 +172,18 @@ class GeminiAPI:
                 "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
             })
             
-            # 모델에 따라 다른 API 사용
-            if "gemini-2.0-flash-preview-image-generation" in model:
-                # Conversational image generation을 위한 텍스트 생성 API 사용
-                contents = [types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=f"Generate an image: {prompt}")]
-                )]
-                
-                config = types.GenerateContentConfig(
-                    temperature=0.7,
-                    max_output_tokens=4096
-                )
-                
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=contents,
-                    config=config
-                )
-            else:
-                # 기존 Imagen 모델을 위한 이미지 생성 API 사용
-                config = types.GenerateImagesConfig(
-                    number_of_images=1,
-                    include_rai_reason=True,
-                    output_mime_type='image/jpeg',
-                    aspect_ratio=aspect_ratio,
-                    person_generation=person_generation
-                )
-                
-                response = self.client.models.generate_images(
-                    model=model,
-                    prompt=prompt,
-                    config=config
-                )
+            # 모든 이미지 생성은 generate_images API 사용
+            config = types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio=aspect_ratio,
+                person_generation=person_generation
+            )
+            
+            response = self.client.models.generate_images(
+                model=model,
+                prompt=prompt,
+                config=config
+            )
             
             logger.log_info("Gemini 이미지 생성 완료")
             return {
