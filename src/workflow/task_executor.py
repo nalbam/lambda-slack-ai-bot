@@ -449,17 +449,34 @@ class TaskExecutor:
         except Exception as e:
             logger.log_warning(f"Gemini 이미지 생성 실패, DALL-E로 대체 실행: {str(e)}")
             
-            # allowlist 오류이거나 지원되지 않는 경우 DALL-E로 대체
-            if "allowlist" in str(e) or "not enabled" in str(e) or "not supported" in str(e):
+            # Gemini 이미지 생성 실패 시 자동으로 DALL-E로 대체
+            error_message = str(e).lower()
+            if any(keyword in error_message for keyword in [
+                "allowlist", "not enabled", "not supported", "생성된 이미지가 없습니다",
+                "no images", "empty response", "403", "unauthorized", "invalid_argument"
+            ]):
                 logger.log_info("DALL-E 3으로 자동 대체 실행")
-                return self._execute_image_generation(task)
+                try:
+                    return self._execute_image_generation(task)
+                except Exception as dalle_error:
+                    logger.log_error("DALL-E 대체 실행도 실패", dalle_error)
+                    return {
+                        'type': 'text',
+                        'content': f"❌ 이미지 생성에 실패했습니다.\n• Gemini: {str(e)}\n• DALL-E: {str(dalle_error)}",
+                        'model': 'system'
+                    }
             else:
-                # 다른 오류는 사용자에게 표시
-                return {
-                    'type': 'text',
-                    'content': f"❌ Gemini 이미지 생성 오류: {str(e)}\n🎨 DALL-E 3으로 다시 시도해보세요.",
-                    'model': 'system'
-                }
+                # 예상치 못한 오류도 DALL-E로 대체 시도
+                logger.log_info("예상치 못한 Gemini 오류, DALL-E로 대체 시도")
+                try:
+                    return self._execute_image_generation(task)
+                except Exception as dalle_error:
+                    logger.log_error("DALL-E 대체 실행도 실패", dalle_error)
+                    return {
+                        'type': 'text',
+                        'content': f"❌ 이미지 생성에 실패했습니다.\n• Gemini: {str(e)}\n• DALL-E: {str(dalle_error)}",
+                        'model': 'system'
+                    }
     
     def _execute_gemini_video_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Gemini Veo를 사용한 비디오 생성 실행"""
