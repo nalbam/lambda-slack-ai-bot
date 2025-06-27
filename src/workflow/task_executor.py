@@ -2,7 +2,8 @@
 작업 실행 엔진
 """
 import time
-from typing import Dict, Any
+import requests
+from typing import Dict, Any, List
 
 from src.config import settings
 from src.api import openai_api, slack_api
@@ -113,17 +114,30 @@ class TaskExecutor:
             filename = f"{settings.IMAGE_MODEL}.{file_ext}"
             
             logger.log_info("이미지 다운로드 시작", {"url_prefix": image_url[:50], "filename": filename})
-            try:
-                import requests
-                response = requests.get(image_url, timeout=30)
-                if response.status_code == 200:
-                    file_data = response.content
-                    logger.log_info("이미지 다운로드 완료", {"file_size": len(file_data)})
-                else:
-                    raise Exception(f"HTTP {response.status_code}: 이미지 다운로드 실패")
-            except Exception as e:
-                logger.log_error("DALL-E 이미지 다운로드 중 오류 발생", e)
-                raise Exception(f"이미지를 다운로드할 수 없습니다: {str(e)}")
+            
+            # 재시도 로직으로 이미지 다운로드
+            
+            max_retries = 3
+            file_data = None
+            
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(image_url, timeout=30)
+                    if response.status_code == 200:
+                        file_data = response.content
+                        logger.log_info("이미지 다운로드 완료", {
+                            "file_size": len(file_data), 
+                            "attempt": attempt + 1
+                        })
+                        break
+                    else:
+                        raise Exception(f"HTTP {response.status_code}: 이미지 다운로드 실패")
+                        
+                except Exception as e:
+                    logger.log_error(f"이미지 다운로드 시도 {attempt + 1} 실패", e)
+                    if attempt == max_retries - 1:
+                        raise Exception(f"이미지를 다운로드할 수 없습니다 ({max_retries}회 시도): {str(e)}")
+                    time.sleep(2 ** attempt)  # 지수 백오프
             
             if not file_data:
                 raise Exception("이미지 다운로드 실패: 데이터가 비어있음")
@@ -247,8 +261,6 @@ class TaskExecutor:
                 }
             
             # 스레드 메시지 가져오기
-            from src.api import slack_api
-            
             channel = self.slack_context["channel"]
             thread_messages = slack_api.get_thread_messages(
                 self.app, 
@@ -320,9 +332,9 @@ class TaskExecutor:
                 user_name = "AI Bot"
             else:
                 try:
-                    from src.api import slack_api
                     user_name = slack_api.get_user_display_name(self.app, user_id)
-                except:
+                except Exception as e:
+                    logger.log_error("사용자 이름 조회 실패", e, {"user_id": user_id})
                     user_name = "User"
             
             # 메시지 텍스트

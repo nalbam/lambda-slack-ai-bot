@@ -107,7 +107,11 @@ JSON만 응답하세요.
             )
             
             content = response.choices[0].message.content
-            return self.parse_intent_response(content)
+            try:
+                return self.parse_intent_response(content)
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.log_error("의도 분석 파싱 실패, fallback 사용", e, {"content": content[:200]})
+                return self.create_fallback_intent(user_message, context)
             
         except Exception as e:
             logger.log_error("의도 분석 실패", e)
@@ -246,8 +250,13 @@ JSON만 응답하세요.
         
         sorted_tasks = []
         remaining_tasks = tasks.copy()
+        max_iterations = len(tasks) * 2  # 무한 루프 방지
+        iteration = 0
         
-        while remaining_tasks:
+        while remaining_tasks and iteration < max_iterations:
+            iteration += 1
+            initial_count = len(remaining_tasks)
+            
             # 의존성이 없거나 이미 완료된 작업들 찾기
             ready_tasks = []
             for task in remaining_tasks:
@@ -259,7 +268,10 @@ JSON만 응답하세요.
                     ready_tasks.append(task)
             
             if not ready_tasks:
-                # 순환 의존성이 있는 경우 우선순위로 정렬
+                # 순환 의존성 감지 - 우선순위가 가장 높은 작업 선택
+                logger.log_warning("순환 의존성 감지됨, 우선순위 기준으로 작업 선택", {
+                    "remaining_tasks": [t['id'] for t in remaining_tasks]
+                })
                 ready_tasks = sorted(remaining_tasks, key=lambda x: x['priority'])[:1]
             
             # 우선순위가 높은 순으로 정렬
@@ -268,6 +280,21 @@ JSON만 응답하세요.
             for task in ready_tasks:
                 sorted_tasks.append(task)
                 remaining_tasks.remove(task)
+            
+            # 진행이 없으면 무한 루프 방지
+            if len(remaining_tasks) == initial_count:
+                logger.log_error("작업 정렬 중 진행 없음, 강제 종료", None, {
+                    "remaining_tasks": [t['id'] for t in remaining_tasks]
+                })
+                break
+        
+        # 남은 작업들 우선순위로 추가
+        if remaining_tasks:
+            logger.log_warning("정렬되지 않은 작업들 우선순위로 추가", {
+                "remaining_count": len(remaining_tasks)
+            })
+            remaining_tasks.sort(key=lambda x: x['priority'])
+            sorted_tasks.extend(remaining_tasks)
         
         return sorted_tasks
     
