@@ -421,17 +421,50 @@ class TaskExecutor:
         """Gemini Imagen을 사용한 이미지 생성 실행"""
         
         try:
-            prompt = task['input']
+            original_prompt = task['input']
+            
+            # Gemini 이미지 생성은 영어 프롬프트가 효과적 (한국어 → 영어 변환)
+            if self._contains_korean(original_prompt):
+                logger.log_info("Gemini 이미지 생성 - 한국어 프롬프트 영어 변환 시작", {
+                    "task_id": task['id'],
+                    "original_prompt": original_prompt[:100] + "..." if len(original_prompt) > 100 else original_prompt
+                })
+                
+                prompt_text = f"""
+다음 한국어 요청을 Gemini Imagen 이미지 생성을 위한 영어 프롬프트로 변환해주세요:
+"{original_prompt}"
+
+영어 프롬프트만 반환하세요:
+"""
+                response = openai_api.generate_chat_completion(
+                    messages=[{"role": "user", "content": prompt_text}],
+                    user=self.slack_context.get('user_id', 'unknown'),
+                    stream=False
+                )
+                english_prompt = response.choices[0].message.content.strip()
+                
+                logger.log_info("Gemini 이미지 생성 - 영어 변환 완료", {
+                    "task_id": task['id'],
+                    "original_prompt": original_prompt[:50] + "..." if len(original_prompt) > 50 else original_prompt,
+                    "english_prompt": english_prompt[:50] + "..." if len(english_prompt) > 50 else english_prompt
+                })
+            else:
+                english_prompt = original_prompt
+                logger.log_info("Gemini 이미지 생성 - 영어 프롬프트 사용", {
+                    "task_id": task['id'],
+                    "prompt": english_prompt[:100] + "..." if len(english_prompt) > 100 else english_prompt
+                })
             
             logger.log_info("Gemini 이미지 생성 시작", {
                 "task_id": task['id'],
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "model": settings.GEMINI_IMAGE_MODEL
+                "final_prompt": english_prompt[:100] + "..." if len(english_prompt) > 100 else english_prompt,
+                "model": settings.GEMINI_IMAGE_MODEL,
+                "is_translated": self._contains_korean(original_prompt)
             })
             
             # Gemini Imagen으로 이미지 생성 시도
             response = gemini_api.generate_image(
-                prompt=prompt
+                prompt=english_prompt
             )
             
             logger.log_info("Gemini API 응답 받음", {
@@ -462,7 +495,8 @@ class TaskExecutor:
             if image_data:
                 logger.log_info("Gemini 이미지 생성 완료", {
                     "task_id": task['id'],
-                    "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt,
+                    "original_prompt": original_prompt[:50] + "..." if len(original_prompt) > 50 else original_prompt,
+                    "english_prompt": english_prompt[:50] + "..." if len(english_prompt) > 50 else english_prompt,
                     "image_data_type": type(image_data).__name__,
                     "image_source": image_source,
                     "has_image_bytes": hasattr(image_data, 'image_bytes'),
@@ -521,7 +555,8 @@ class TaskExecutor:
                         return {
                             'type': 'image',
                             'uploaded': True,
-                            'prompt': prompt,
+                            'original_prompt': original_prompt,
+                            'english_prompt': english_prompt,
                             'filename': filename,
                             'model': settings.GEMINI_IMAGE_MODEL
                         }
@@ -557,7 +592,8 @@ class TaskExecutor:
                 "task_id": task['id'],
                 "error": str(e),
                 "error_type": type(e).__name__,
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
+                "original_prompt": original_prompt[:100] + "..." if len(original_prompt) > 100 else original_prompt,
+                "english_prompt": english_prompt if 'english_prompt' in locals() else 'N/A'
             })
             
             # Gemini 이미지 생성 실패 시 자동으로 DALL-E로 대체

@@ -194,12 +194,14 @@ class GeminiAPI:
 
         try:
             logger.log_info(
-                "Gemini 이미진 생성 요청",
+                "Gemini 이미지 생성 요청",
                 {
                     "model": model,
                     "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
                     "aspect_ratio": aspect_ratio,
                     "person_generation": person_generation,
+                    "prompt_length": len(prompt),
+                    "actual_prompt": prompt
                 },
             )
 
