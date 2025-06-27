@@ -94,36 +94,6 @@ def get_user_display_name(app: App, user_id: str) -> str:
     user_info = get_user_info(app, user_id)
     return user_info.get("profile", {}).get("display_name", "Unknown User")
 
-def send_message(app: App, channel: str, text: str, thread_ts: Optional[str] = None) -> Dict[str, Any]:
-    """Slack 채널에 메시지를 보냅니다.
-
-    Args:
-        app: Slack 앱 인스턴스
-        channel: 채널 ID
-        text: 보낼 메시지 텍스트
-        thread_ts: 스레드 타임스탬프 (선택 사항)
-
-    Returns:
-        Slack API 응답
-    """
-    try:
-        kwargs = {
-            "channel": channel,
-            "text": text
-        }
-
-        if thread_ts:
-            kwargs["thread_ts"] = thread_ts
-
-        response = app.client.chat_postMessage(**kwargs)
-        return response
-    except SlackApiError as e:
-        logger.log_error("메시지 전송 중 오류 발생", e, {
-            "channel": channel,
-            "thread_ts": thread_ts
-        })
-        raise SlackApiError(f"메시지 전송 오류: {str(e)}")
-
 def update_message(app: App, channel: str, ts: str, text: str) -> Dict[str, Any]:
     """기존 Slack 메시지를 업데이트합니다.
 
@@ -149,30 +119,6 @@ def update_message(app: App, channel: str, ts: str, text: str) -> Dict[str, Any]
             "ts": ts
         })
         raise SlackApiError(f"메시지 업데이트 오류: {str(e)}")
-
-def delete_message(app: App, channel: str, ts: str) -> Dict[str, Any]:
-    """Slack 메시지를 삭제합니다.
-
-    Args:
-        app: Slack 앱 인스턴스
-        channel: 채널 ID
-        ts: 삭제할 메시지의 타임스탬프
-
-    Returns:
-        Slack API 응답
-    """
-    try:
-        response = app.client.chat_delete(
-            channel=channel,
-            ts=ts
-        )
-        return response
-    except SlackApiError as e:
-        logger.log_error("메시지 삭제 중 오류 발생", e, {
-            "channel": channel,
-            "ts": ts
-        })
-        raise SlackApiError(f"메시지 삭제 오류: {str(e)}")
 
 def upload_file(app: App, channel: str, file_data: bytes, filename: str, thread_ts: Optional[str] = None) -> Dict[str, Any]:
     """Slack 채널에 파일을 업로드합니다.

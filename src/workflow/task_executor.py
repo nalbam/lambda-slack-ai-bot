@@ -236,16 +236,6 @@ class TaskExecutor:
         korean_chars = sum(1 for char in text if '가' <= char <= '힣')
         return korean_chars > len(text) * 0.2  # 20% 이상이 한국어면 한국어로 판단
     
-    def _check_dependencies(self, task: Dict[str, Any], completed_results: Dict[str, Any]) -> bool:
-        """작업 의존성 확인"""
-        
-        for dep_id in task.get('dependencies', []):
-            if dep_id not in completed_results:
-                return False
-            if completed_results[dep_id]['status'] != 'completed':
-                return False
-        
-        return True
     
     def _execute_thread_summary(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """스레드 요약 실행 - 스레드 내 모든 메시지 요약"""

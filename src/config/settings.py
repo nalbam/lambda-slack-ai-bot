@@ -41,17 +41,6 @@ MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 KEYWARD_IMAGE = os.environ.get("KEYWARD_IMAGE", "그려줘").strip()
 KEYWARD_EMOJI = os.environ.get("KEYWARD_EMOJI", "이모지").strip()
 
-# 메시지 템플릿
-MSG_PREVIOUS = f"이전 대화 내용 확인 중... {BOT_CURSOR}"
-MSG_IMAGE_DESCRIBE = f"이미지 감상 중... {BOT_CURSOR}"
-MSG_IMAGE_GENERATE = f"이미지 생성 준비 중... {BOT_CURSOR}"
-MSG_IMAGE_DRAW = f"이미지 그리는 중... {BOT_CURSOR}"
-MSG_RESPONSE = f"응답 기다리는 중... {BOT_CURSOR}"
-
-# 명령어
-COMMAND_DESCRIBE = "Describe the image in great detail as if viewing a photo."
-COMMAND_GENERATE = "Convert the above sentence into a command for DALL-E to generate an image within 1000 characters. Just give me a prompt."
-
 # 텍스트 변환 설정
 CONVERSION_ARRAY = [
     ["**", "*"],

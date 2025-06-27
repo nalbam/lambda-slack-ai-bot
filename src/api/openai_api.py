@@ -126,26 +126,3 @@ def generate_image(prompt: str) -> Dict[str, Any]:
         })
         raise OpenAIApiError(f"이미지 생성 오류: {str(e)}")
 
-def extract_content_from_stream(stream: Generator[Dict[str, Any], None, None]) -> Tuple[str, int]:
-    """스트림에서 콘텐츠를 추출합니다.
-
-    Args:
-        stream: OpenAI 스트림 객체
-
-    Returns:
-        (추출된 텍스트, 추출된 청크 수)의 튜플
-    """
-    message = ""
-    chunk_count = 0
-
-    try:
-        for chunk in stream:
-            chunk_count += 1
-            content = chunk.choices[0].delta.content or ""
-            message += content
-
-        return message, chunk_count
-
-    except Exception as e:
-        logger.log_error("스트림에서 콘텐츠 추출 중 오류 발생", e)
-        return message, chunk_count
