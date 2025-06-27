@@ -24,7 +24,7 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o").strip() # DO NOT CHANGE 
 # Gemini 설정 (GEMINI_API_KEY 또는 GOOGLE_API_KEY 사용 가능)
 GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")).strip()
 GEMINI_TEXT_MODEL = os.environ.get("GEMINI_TEXT_MODEL", "gemini-2.5-flash").strip() # DO NOT CHANGE THIS
-GEMINI_IMAGE_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-4.0-generate-preview-06-06").strip() # DO NOT CHANGE THIS
+GEMINI_IMAGE_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-3.0-generate-002").strip() # DO NOT CHANGE THIS
 GEMINI_VIDEO_MODEL = os.environ.get("GEMINI_VIDEO_MODEL", "veo-2.0-generate-001").strip() # DO NOT CHANGE THIS
 
 # 이미지 생성 설정
