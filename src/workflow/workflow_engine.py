@@ -40,8 +40,9 @@ class WorkflowEngine:
             logger.log_info("2단계: 작업 나열 시작")
             task_list = self.create_task_list(intent_data, context)
             
-            # 진행 상황 업데이트
-            self.update_progress(latest_ts, f"📋 {len(task_list)}개 작업을 처리합니다...")
+            # 진행 상황 업데이트 및 예상 시간 안내
+            estimated_time = intent_data.get('estimated_time', '알 수 없음')
+            self.update_progress(latest_ts, f"📋 {len(task_list)}개 작업을 처리합니다... (예상 시간: {estimated_time}초)")
             
             # 3단계: 작업 처리 및 즉시 회신
             logger.log_info("3단계: 작업 처리 및 회신 시작")
