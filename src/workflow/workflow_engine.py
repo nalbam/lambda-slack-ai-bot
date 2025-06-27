@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 from src.api import openai_api, slack_api
 from src.utils import logger
 from .task_executor import TaskExecutor
+from .slack_utils import SlackMessageUtils
 
 
 class WorkflowEngine:
@@ -18,6 +19,7 @@ class WorkflowEngine:
         self.app = app
         self.slack_context = slack_context
         self.task_executor = TaskExecutor(app, slack_context)
+        self.slack_utils = SlackMessageUtils(app)
     
     def process_user_request(self, user_message: str, context: Dict[str, Any]) -> None:
         """5단계 워크플로우 메인 처리 함수"""
@@ -350,42 +352,46 @@ JSON만 응답하세요.
         }
     
     def send_final_response(self, aggregated_results: Dict[str, Any], message_ts: str) -> None:
-        """5단계: 최종 응답 생성 및 전송"""
+        """5단계: 최종 응답 생성 및 전송 - 스트리밍 지원"""
         
         try:
-            # OpenAI에게 결과 정리 요청
+            # OpenAI에게 결과 정리 요청 (스트리밍 사용)
             summary_prompt = self.create_response_summary_prompt(aggregated_results)
             
-            response = openai_api.generate_chat_completion(
-                messages=[{"role": "user", "content": summary_prompt}],
-                user="response_generator",
-                stream=False
+            messages = [{"role": "user", "content": summary_prompt}]
+            
+            # 스트리밍으로 최종 응답 생성
+            final_text = self.slack_utils.reply_text_stream(
+                messages=messages,
+                say=self.slack_context["say"],
+                channel=self.slack_context["channel"],
+                thread_ts=self.slack_context.get("thread_ts"),
+                latest_ts=message_ts,
+                user="response_generator"
             )
             
-            final_text = response.choices[0].message.content
-            
         except Exception as e:
-            logger.log_error("응답 포맷팅 실패", e)
+            logger.log_error("응답 스트리밍 실패", e)
             # Fallback 응답
             final_text = self.create_simple_summary(aggregated_results)
-        
-        # Slack에 텍스트 응답 전송
-        slack_api.update_message(
-            self.app, 
-            self.slack_context["channel"], 
-            message_ts, 
-            final_text
-        )
+            slack_api.update_message(
+                self.app, 
+                self.slack_context["channel"], 
+                message_ts, 
+                final_text
+            )
         
         # 이미지들 업로드
         for i, image in enumerate(aggregated_results['results']['images']):
             try:
-                slack_api.upload_file(
-                    self.app,
-                    self.slack_context["channel"],
-                    image['image_data'],
-                    f"generated_{i+1}.png",
-                    self.slack_context.get("thread_ts")
+                self.slack_utils.upload_image_to_slack(
+                    say=self.slack_context["say"],
+                    channel=self.slack_context["channel"],
+                    thread_ts=self.slack_context.get("thread_ts"),
+                    latest_ts=message_ts,
+                    image_data=image['image_data'],
+                    filename=f"generated_{i+1}.png",
+                    prompt=f"🎨 이미지 {i+1}: {image.get('prompt', '생성 완료')}"
                 )
             except Exception as e:
                 logger.log_error(f"이미지 {i+1} 업로드 실패", e)
@@ -479,67 +485,19 @@ JSON만 응답하세요.
 """
     
     def handle_workflow_error(self, error: Exception, user_message: str, context: Dict[str, Any]) -> None:
-        """워크플로우 실패 시 기존 방식으로 fallback"""
+        """워크플로우 실패 시 간단한 에러 처리"""
         
-        logger.log_error("워크플로우 실패, fallback 사용", error)
+        logger.log_error("워크플로우 실패", error, {
+            "user_message": user_message[:100],
+            "user_id": context.get("user_id"),
+            "has_image": bool(context.get("uploaded_image"))
+        })
         
+        # 간단한 에러 메시지 전송
         try:
-            # 기존 MessageHandler 방식으로 처리
-            from src.handlers.message_handler import MessageHandler
-            
-            handler = MessageHandler(self.app)
-            
-            # 간단한 키워드 기반 분류
-            if context.get('uploaded_image'):
-                # 이미지 분석
-                content = [{
-                    "type": "text", 
-                    "text": f"{context['user_name']}: {user_message}"
-                }, {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{context['uploaded_image']['mimetype']};base64,{context['uploaded_image']['base64']}"}
-                }]
-                handler.conversation(
-                    self.slack_context["say"],
-                    self.slack_context.get("thread_ts"),
-                    content,
-                    self.slack_context["channel"],
-                    context.get("user_id"),
-                    context.get("client_msg_id"),
-                    "text"
-                )
-            elif any(keyword in user_message for keyword in ["그려", "그림", "이미지", "생성"]):
-                # 이미지 생성
-                content = [{"type": "text", "text": f"{context['user_name']}: {user_message}"}]
-                handler.image_generate(
-                    self.slack_context["say"],
-                    self.slack_context.get("thread_ts"),
-                    content,
-                    self.slack_context["channel"],
-                    context.get("client_msg_id"),
-                    "image"
-                )
-            else:
-                # 일반 대화
-                content = [{"type": "text", "text": f"{context['user_name']}: {user_message}"}]
-                handler.conversation(
-                    self.slack_context["say"],
-                    self.slack_context.get("thread_ts"),
-                    content,
-                    self.slack_context["channel"],
-                    context.get("user_id"),
-                    context.get("client_msg_id"),
-                    "text"
-                )
-                
-        except Exception as fallback_error:
-            logger.log_error("Fallback도 실패", fallback_error)
-            
-            # 최후 수단: 간단한 에러 메시지
-            try:
-                self.slack_context["say"](
-                    text="죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.",
-                    thread_ts=self.slack_context.get("thread_ts")
-                )
-            except:
-                pass  # 에러 메시지도 보낼 수 없는 경우
+            self.slack_context["say"](
+                text="⚠️ 죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+                thread_ts=self.slack_context.get("thread_ts")
+            )
+        except Exception as send_error:
+            logger.log_error("에러 메시지 전송도 실패", send_error)

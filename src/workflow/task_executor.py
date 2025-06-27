@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from src.api import openai_api, slack_api
 from src.utils import logger
+from .slack_utils import SlackMessageUtils
 
 
 class TaskExecutor:
@@ -14,6 +15,7 @@ class TaskExecutor:
     def __init__(self, app, slack_context: Dict[str, Any]):
         self.app = app
         self.slack_context = slack_context
+        self.slack_utils = SlackMessageUtils(app)
     
     def execute_single_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """개별 작업 실행"""
