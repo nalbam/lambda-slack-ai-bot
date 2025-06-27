@@ -4,7 +4,7 @@ service: lambda-slack-ai-bot
 provider:
   name: aws
   region: us-east-1
-  runtime: python3.12
+  runtime: python3.9
   stage: ${opt:stage, 'dev'}
   memorySize: 5120
   timeout: 600
