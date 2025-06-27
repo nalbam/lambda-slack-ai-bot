@@ -465,15 +465,39 @@ class TaskExecutor:
                     "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt,
                     "image_data_type": type(image_data).__name__,
                     "image_source": image_source,
-                    "has_image_bytes": hasattr(image_data, 'image_bytes')
+                    "has_image_bytes": hasattr(image_data, 'image_bytes'),
+                    "has_image": hasattr(image_data, 'image')
                 })
                 
                 # 이미지 바이트 데이터 추출 및 Slack 업로드
                 try:
+                    file_data = None
+                    filename = f"gemini_{settings.GEMINI_IMAGE_MODEL}.png"
+                    
+                    # 다양한 이미지 데이터 형식 시도
                     if hasattr(image_data, 'image_bytes') and image_data.image_bytes:
                         file_data = image_data.image_bytes
-                        filename = f"gemini_{settings.GEMINI_IMAGE_MODEL}.png"
-                        
+                        logger.log_info("image_bytes에서 이미지 데이터 추출", {
+                            "task_id": task['id'],
+                            "data_size": len(file_data)
+                        })
+                    elif hasattr(image_data, 'image') and image_data.image:
+                        # image 속성에서 바이트 데이터 추출
+                        image_obj = image_data.image
+                        if hasattr(image_obj, 'image_bytes') and image_obj.image_bytes:
+                            file_data = image_obj.image_bytes
+                            logger.log_info("image.image_bytes에서 이미지 데이터 추출", {
+                                "task_id": task['id'],
+                                "data_size": len(file_data)
+                            })
+                        else:
+                            logger.log_info("image 객체 속성 분석", {
+                                "task_id": task['id'],
+                                "image_obj_type": type(image_obj).__name__,
+                                "image_obj_attributes": [attr for attr in dir(image_obj) if not attr.startswith('_')]
+                            })
+                    
+                    if file_data:
                         logger.log_info("Gemini 이미지 Slack 업로드 시작", {
                             "task_id": task['id'],
                             "filename": filename,
@@ -489,7 +513,7 @@ class TaskExecutor:
                             self.slack_context.get("thread_ts")
                         )
                         
-                        logger.log_info("Gemini 이미지 Slack 업로드 완료", {
+                        logger.log_info("Gemini 이미지 Slack 업로드 완룈", {
                             "task_id": task['id'],
                             "filename": filename
                         })
@@ -502,9 +526,13 @@ class TaskExecutor:
                             'model': settings.GEMINI_IMAGE_MODEL
                         }
                     else:
-                        logger.log_error("Gemini 이미지 데이터에 image_bytes가 없음", None, {
+                        logger.log_error("Gemini 이미지 데이터에서 바이트를 찾을 수 없음", None, {
                             "task_id": task['id'],
-                            "image_data_attributes": [attr for attr in dir(image_data) if not attr.startswith('_')]
+                            "image_data_type": type(image_data).__name__,
+                            "image_data_attributes": [attr for attr in dir(image_data) if not attr.startswith('_')],
+                            "has_image_bytes": hasattr(image_data, 'image_bytes'),
+                            "has_image": hasattr(image_data, 'image'),
+                            "image_attr_type": type(getattr(image_data, 'image', None)).__name__ if hasattr(image_data, 'image') else None
                         })
                         raise Exception("이미지 바이트 데이터를 찾을 수 없습니다")
                         
