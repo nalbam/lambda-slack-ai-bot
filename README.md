@@ -13,7 +13,7 @@ A multi-AI serverless Slack bot powered by **OpenAI** (GPT-4o, DALL-E 3) and **G
 - **Stage 4**: Completion notification
 
 ### 🤖 Multi-AI Capabilities
-- **Dual AI Models**: Choose between OpenAI GPT-4o and Google Gemini 2.0 Flash
+- **Dual AI Models**: Choose between OpenAI GPT-4o and Google Gemini 2.5 Flash
 - **Conversational AI**: Chat with either AI model in Slack channels and DMs
 - **Complex Request Handling**: Processes multi-part requests like "Gemini로 설명하고 DALL-E로 이미지 그려줘"
 - **Image Generation**: Create images using DALL-E 3 with smart Korean-to-English translation
@@ -100,7 +100,7 @@ TEMPERATURE="0.5"                    # AI response creativity (0.0-1.0)
 
 # AI Models
 OPENAI_MODEL="gpt-4o"                # OpenAI chat model
-GEMINI_TEXT_MODEL="gemini-2.0-flash-001"  # Gemini text model
+GEMINI_TEXT_MODEL="gemini-2.5-flash" # Gemini text model (latest)
 IMAGE_MODEL="dall-e-3"               # Image generation model
 IMAGE_SIZE="1024x1024"               # Generated image size
 IMAGE_QUALITY="standard"             # Image quality (standard/hd)

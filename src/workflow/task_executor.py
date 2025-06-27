@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 
 from src.config import settings
 from src.api import openai_api, slack_api
+from src.api.gemini_api import gemini_api
 from src.utils import logger
 from .slack_utils import SlackMessageUtils
 
@@ -35,6 +36,14 @@ class TaskExecutor:
             return self._execute_image_analysis(task)
         elif task_type == 'thread_summary':
             return self._execute_thread_summary(task)
+        elif task_type == 'gemini_image_generation':
+            return self._execute_gemini_image_generation(task)
+        elif task_type == 'gemini_video_generation':
+            return self._execute_gemini_video_generation(task)
+        elif task_type == 'gemini_text_generation':
+            return self._execute_gemini_text_generation(task)
+        elif task_type == 'gemini_image_analysis':
+            return self._execute_gemini_image_analysis(task)
         else:
             raise ValueError(f"지원하지 않는 작업 타입: {task_type}")
     
@@ -339,3 +348,175 @@ class TaskExecutor:
             formatted_messages.append(f"[{i+1}] {user_name}: {text}")
         
         return "\n".join(formatted_messages)
+    
+    def _execute_gemini_text_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Gemini를 사용한 텍스트 생성 실행"""
+        
+        try:
+            # 메시지 준비
+            messages = [{"role": "user", "content": task['input']}]
+            
+            # 스레드 컨텍스트 추가
+            if task.get('context'):
+                context_messages = []
+                for msg in task['context']:
+                    role = "assistant" if msg.get("bot_id") else "user"
+                    user_name = msg.get('user_name', 'User')
+                    content = f"{user_name}: {msg.get('text', '')}"
+                    context_messages.append({"role": role, "content": content})
+                
+                messages = context_messages + messages
+            
+            # Gemini API 호출
+            response = gemini_api.generate_text(
+                messages=messages,
+                stream=False
+            )
+            
+            content = gemini_api.extract_text_from_response(response)
+            
+            logger.log_info("Gemini 텍스트 생성 완료", {
+                "task_id": task['id'],
+                "content_length": len(content)
+            })
+            
+            return {
+                'type': 'text',
+                'content': content,
+                'model': settings.GEMINI_TEXT_MODEL
+            }
+            
+        except Exception as e:
+            logger.log_error("Gemini 텍스트 생성 실패", e, {"task_id": task['id']})
+            raise e
+    
+    def _execute_gemini_image_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Gemini Imagen을 사용한 이미지 생성 실행"""
+        
+        try:
+            prompt = task['input']
+            
+            # Gemini Imagen으로 이미지 생성 시도
+            response = gemini_api.generate_image(
+                prompt=prompt
+            )
+            
+            # 성공한 경우 이미지 처리
+            if response.get('images') and len(response['images']) > 0:
+                image_data = response['images'][0]
+                
+                logger.log_info("Gemini 이미지 생성 완료", {
+                    "task_id": task['id'],
+                    "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt
+                })
+                
+                return {
+                    'type': 'image',
+                    'image_data': image_data,
+                    'prompt': prompt,
+                    'model': 'imagen-3.0'
+                }
+            else:
+                raise Exception("생성된 이미지가 없습니다")
+                
+        except Exception as e:
+            logger.log_warning(f"Gemini 이미지 생성 실패, DALL-E로 대체 실행: {str(e)}")
+            
+            # allowlist 오류이거나 지원되지 않는 경우 DALL-E로 대체
+            if "allowlist" in str(e) or "not enabled" in str(e) or "not supported" in str(e):
+                logger.log_info("DALL-E 3으로 자동 대체 실행")
+                return self._execute_image_generation(task)
+            else:
+                # 다른 오류는 사용자에게 표시
+                return {
+                    'type': 'text',
+                    'content': f"❌ Gemini 이미지 생성 오류: {str(e)}\n🎨 DALL-E 3으로 다시 시도해보세요.",
+                    'model': 'system'
+                }
+    
+    def _execute_gemini_video_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Gemini Veo를 사용한 비디오 생성 실행"""
+        
+        try:
+            prompt = task['input']
+            duration = task.get('duration', 5)  # 기본 5초
+            
+            # Gemini Veo로 비디오 생성 시도
+            response = gemini_api.generate_video(
+                prompt=prompt,
+                duration_seconds=duration
+            )
+            
+            # 비디오 생성은 비동기 작업이므로 작업 시작 알림
+            logger.log_info("Gemini 비디오 생성 작업 시작", {
+                "task_id": task['id'],
+                "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt
+            })
+            
+            return {
+                'type': 'text',
+                'content': f"🎬 Gemini Veo로 비디오 생성을 시작했습니다.\n📝 프롬프트: {prompt}\n⏱️ 예상 소요 시간: 1-3분\n\n{response.get('message', '비디오 생성이 진행 중입니다.')}",
+                'model': 'veo-2.0'
+            }
+                
+        except Exception as e:
+            logger.log_warning(f"Gemini 비디오 생성 실패: {str(e)}")
+            
+            # allowlist 오류인 경우 안내
+            if "allowlist" in str(e) or "not enabled" in str(e) or "not supported" in str(e):
+                return {
+                    'type': 'text',
+                    'content': "⚠️ Gemini Veo 비디오 생성은 현재 allowlist 뒤에 있어 일반적으로 사용할 수 없습니다.\n🎬 이 기능은 Google에서 승인된 개발자만 사용할 수 있습니다.\n💡 텍스트 생성이나 이미지 생성을 대신 시도해보세요.",
+                    'model': 'system'
+                }
+            else:
+                # 다른 오류는 사용자에게 표시
+                return {
+                    'type': 'text',
+                    'content': f"❌ Gemini 비디오 생성 오류: {str(e)}\n💡 텍스트 생성이나 이미지 생성을 대신 시도해보세요.",
+                    'model': 'system'
+                }
+    
+    def _execute_gemini_image_analysis(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Gemini Vision을 사용한 이미지 분석 실행"""
+        
+        try:
+            # 이미지 정보 추출
+            image_info = task.get('uploaded_image')
+            if not image_info:
+                raise ValueError("분석할 이미지가 제공되지 않았습니다")
+            
+            # 이미지를 base64로 인코딩
+            if 'base64' in image_info:
+                image_base64 = image_info['base64']
+            else:
+                # URL에서 이미지 다운로드 후 인코딩
+                image_base64 = slack_api.get_encoded_image_from_slack(image_info['url'])
+            
+            if not image_base64:
+                raise Exception("이미지 인코딩 실패")
+            
+            # Gemini Vision으로 이미지 분석
+            response = gemini_api.analyze_image(
+                image_data=image_base64,
+                prompt=task['input'],
+                mime_type=image_info.get('mimetype', 'image/png')
+            )
+            
+            content = gemini_api.extract_text_from_response(response)
+            
+            logger.log_info("Gemini 이미지 분석 완료", {
+                "task_id": task['id'],
+                "content_length": len(content)
+            })
+            
+            return {
+                'type': 'analysis',
+                'content': content,
+                'analyzed_image': image_info,
+                'model': settings.GEMINI_TEXT_MODEL
+            }
+            
+        except Exception as e:
+            logger.log_error("Gemini 이미지 분석 실패", e, {"task_id": task['id']})
+            raise e

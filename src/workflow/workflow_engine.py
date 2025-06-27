@@ -78,7 +78,7 @@ class WorkflowEngine:
     "required_tasks": [
         {{
             "task_id": "unique_id",
-            "task_type": "text_generation|image_generation|image_analysis|thread_summary",
+            "task_type": "text_generation|image_generation|image_analysis|thread_summary|gemini_text_generation|gemini_image_generation|gemini_video_generation|gemini_image_analysis",
             "description": "작업 설명",
             "input_data": "작업 입력",
             "priority": 1-10,
@@ -94,6 +94,10 @@ class WorkflowEngine:
 - "고양이 그려줘" → image_generation 작업 1개  
 - "AI 설명하고 로봇 이미지도 그려줘" → text_generation + image_generation 작업 2개
 - "스레드 요약해줘" → thread_summary 작업 1개
+- "Gemini로 텍스트 생성해줘" → gemini_text_generation 작업 1개
+- "Gemini로 이미지 만들어줘" → gemini_image_generation 작업 1개
+- "Gemini로 비디오 만들어줘" → gemini_video_generation 작업 1개
+- "Gemini로 이미지 분석해줘" → gemini_image_analysis 작업 1개
 
 JSON만 응답하세요.
 """
@@ -186,6 +190,63 @@ JSON만 응답하세요.
                 "execution_strategy": "sequential",
                 "estimated_time": "8"
             }
+        elif any(keyword in user_message for keyword in ["비디오", "video", "동영상", "영상"]):
+            return {
+                "user_intent": "비디오 생성 요청 (지원되지 않음)",
+                "required_tasks": [{
+                    "task_id": "fallback_video_unsupported",
+                    "task_type": "text_generation",
+                    "description": "비디오 생성 미지원 안내",
+                    "input_data": "죄송합니다. 비디오 생성 기능은 현재 지원되지 않습니다. 텍스트 응답이나 이미지 생성을 요청해주세요.",
+                    "priority": 1,
+                    "depends_on": []
+                }],
+                "execution_strategy": "sequential",
+                "estimated_time": "3"
+            }
+        elif any(keyword in user_message for keyword in ["gemini", "제미니"]):
+            if context.get('uploaded_image'):
+                return {
+                    "user_intent": "Gemini 이미지 분석 요청",
+                    "required_tasks": [{
+                        "task_id": "fallback_gemini_image_analysis",
+                        "task_type": "gemini_image_analysis",
+                        "description": "Gemini로 이미지 분석",
+                        "input_data": user_message,
+                        "priority": 1,
+                        "depends_on": []
+                    }],
+                    "execution_strategy": "sequential",
+                    "estimated_time": "10"
+                }
+            elif any(img_keyword in user_message for img_keyword in ["그려", "그림", "이미지"]):
+                return {
+                    "user_intent": "Gemini 이미지 생성 요청",
+                    "required_tasks": [{
+                        "task_id": "fallback_gemini_image_gen",
+                        "task_type": "gemini_image_generation",
+                        "description": "Gemini로 이미지 생성",
+                        "input_data": user_message,
+                        "priority": 1,
+                        "depends_on": []
+                    }],
+                    "execution_strategy": "sequential",
+                    "estimated_time": "20"
+                }
+            else:
+                return {
+                    "user_intent": "Gemini 텍스트 생성 요청",
+                    "required_tasks": [{
+                        "task_id": "fallback_gemini_text",
+                        "task_type": "gemini_text_generation",
+                        "description": "Gemini로 텍스트 생성",
+                        "input_data": user_message,
+                        "priority": 1,
+                        "depends_on": []
+                    }],
+                    "execution_strategy": "sequential",
+                    "estimated_time": "10"
+                }
         elif any(keyword in user_message for keyword in ["그려", "그림", "이미지", "생성"]):
             return {
                 "user_intent": "이미지 생성 요청",
@@ -353,9 +414,26 @@ JSON만 응답하세요.
             elif result['type'] == 'image':
                 # 이미지는 이미 TaskExecutor에서 업로드됨
                 # 별도 프롬프트 메시지를 새로 전송
+                model_info = result.get('model', 'Unknown')
                 if result.get('revised_prompt'):
                     self.slack_context["say"](
-                        text=f"🎨 {result['revised_prompt']}", 
+                        text=f"🎨 [{model_info}] {result['revised_prompt']}", 
+                        thread_ts=self.slack_context.get("thread_ts")
+                    )
+                elif result.get('prompt'):
+                    self.slack_context["say"](
+                        text=f"🎨 [{model_info}] {result['prompt']}", 
+                        thread_ts=self.slack_context.get("thread_ts")
+                    )
+                
+            elif result['type'] == 'video':
+                # 비디오는 이미 TaskExecutor에서 업로드됨
+                # 별도 프롬프트 메시지를 새로 전송
+                model_info = result.get('model', 'Unknown')
+                duration = result.get('duration', 'Unknown')
+                if result.get('prompt'):
+                    self.slack_context["say"](
+                        text=f"🎬 [{model_info}] {result['prompt']} ({duration}초)", 
                         thread_ts=self.slack_context.get("thread_ts")
                     )
                 
@@ -412,18 +490,29 @@ JSON만 응답하세요.
 
 2. 이미지 생성
    - DALL-E를 통한 다양한 스타일의 이미지 생성
+   - Gemini Imagen을 통한 고품질 이미지 생성
    - 로고, 일러스트, 개념 시각화
 
-3. 이미지 분석  
-   - 이미지 내용 설명
+3. 비디오 생성 (현재 지원되지 않음)
+   - 향후 Gemini Veo를 통한 비디오 생성 예정
+   - 현재는 텍스트 응답과 이미지 생성만 지원
+
+4. 이미지 분석  
+   - OpenAI Vision을 통한 이미지 내용 설명
+   - Gemini Vision을 통한 고급 이미지 분석
    - 차트, 그래프 분석
    - 코드 스크린샷 해석
    - 문서 이미지 읽기
 
-4. 스레드 요약
+5. 스레드 요약
    - 스레드 내 모든 메시지 분석 및 요약
    - 주요 주제 및 결론 추출
    - 참여자별 의견 정리
+
+6. AI 모델 선택
+   - OpenAI (GPT-4o, DALL-E 3, Vision)
+   - Google Gemini (Gemini 2.5 Flash, Imagen 4.0, Veo 2.0)
+   - 용도에 따른 최적 모델 자동 선택
 """
     
     def handle_workflow_error(self, error: Exception, user_message: str, context: Dict[str, Any]) -> None:
