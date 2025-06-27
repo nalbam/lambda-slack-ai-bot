@@ -6,14 +6,26 @@ A serverless Slack bot powered by OpenAI's GPT and DALL-E models, built with AWS
 
 ## Features
 
-- 🤖 **Conversational AI**: Chat with GPT-4o in Slack channels and DMs
-- 🎨 **Image Generation**: Create images using DALL-E 3 with the "그려줘" keyword
-- 🧵 **Thread Context**: Maintains conversation history within threads
-- ⚡ **Real-time Streaming**: Live response updates as AI generates content
-- 🖼️ **Image Analysis**: Describes uploaded images using GPT-4 Vision
-- 📝 **Smart Formatting**: Automatically handles long messages and code blocks
-- 🔄 **Duplicate Prevention**: Prevents duplicate responses using DynamoDB
-- ⏰ **Auto Cleanup**: Conversation context expires after 1 hour (TTL)
+### 🎯 4-Stage Intelligent Workflow
+- **Stage 1**: Intent Analysis using OpenAI (understands complex multi-part requests)
+- **Stage 2**: Task Planning (breaks down requests into executable actions)
+- **Stage 3**: Direct Execution & Response (immediate results without AI summarization)
+- **Stage 4**: Completion notification
+
+### 🤖 AI Capabilities
+- **Conversational AI**: Chat with GPT-4o in Slack channels and DMs
+- **Complex Request Handling**: Processes multi-part requests like "Explain AI and draw a robot image"
+- **Image Generation**: Create images using DALL-E 3 with smart Korean-to-English translation
+- **Image Analysis**: Describes uploaded images using GPT-4 Vision
+- **Thread Summarization**: Intelligent summarization of thread conversations
+- **Real-time Streaming**: Live text response updates as AI generates content
+
+### 💬 Slack Integration
+- **Thread Context**: Maintains conversation history within threads
+- **Smart Formatting**: Automatically handles long messages and code blocks
+- **Instant Image Upload**: Generated images appear immediately in Slack
+- **Duplicate Prevention**: Prevents duplicate responses using DynamoDB
+- **Auto Cleanup**: Conversation context expires after 1 hour (TTL)
 
 ## Install
 
@@ -99,35 +111,63 @@ DYNAMODB_TABLE_NAME="slack-ai-bot-context"  # Table for conversation storage
 
 ## Usage
 
-### Mention the Bot
-In any channel where the bot is added:
+### 🔥 Complex Multi-Task Requests
+The bot can handle sophisticated requests that combine multiple actions:
+```
+@botname AI에 대해 설명하고 로봇 이미지도 그려줘
+@botname 머신러닝 알고리즘을 요약하고 관련 다이어그램도 만들어줘
+@botname [upload code screenshot] 이 코드를 분석하고 개선 방안도 써줘
+@botname 스레드 요약해줘
+```
+
+### 💬 Simple Conversations
+**Mention in Channels:**
 ```
 @botname Hello! How can you help me?
+@botname 양자 컴퓨팅을 쉽게 설명해줘
 ```
 
-### Direct Messages
-Send direct messages to the bot:
+**Direct Messages:**
 ```
 Explain quantum computing in simple terms
+Write a Python function to sort a list
 ```
 
-### Image Generation
-Use the "그려줘" keyword to generate images:
+### 🎨 Image Generation
+Smart Korean-to-English translation for DALL-E:
 ```
 @botname 귀여운 고양이 그려줘
+@botname 미래 도시의 스카이라인을 그려줘
+@botname Draw a robot in a cyberpunk style
 ```
 
-### Image Analysis
-Upload an image and ask about it:
+### 🖼️ Image Analysis
+Upload images and get detailed analysis:
 ```
 @botname [upload image] What do you see in this image?
+@botname [upload chart] Analyze this data visualization
+@botname [upload code screenshot] Explain this code
 ```
 
-### Thread Conversations
-Reply in threads to maintain conversation context. The bot remembers:
+### 🧵 Thread Conversations & Summarization
+Reply in threads for contextual conversations. The bot remembers:
 - Previous messages in the thread
-- User reactions (for emoji responses)
-- Uploaded images
+- User reactions (for emoji responses)  
+- Uploaded images and analysis results
+- Multi-step task progress
+
+**Thread Summarization:**
+```
+@botname 스레드 요약해줘
+@botname summarize this thread
+@botname 이 스레드 내용 정리해줘
+```
+
+The bot will analyze all messages in the current thread and provide:
+- Key topics and main points
+- Important decisions or conclusions
+- Participant opinions and perspectives
+- Organized summary in 3-5 paragraphs
 
 ## Deployment
 
@@ -196,29 +236,59 @@ curl https://api.openai.com/v1/images/generations \
 ## Architecture
 
 ```
-Slack → API Gateway → Lambda → OpenAI API
-                        ↓
-                   DynamoDB (Context)
+Slack → API Gateway → Lambda → 4-Stage Workflow Engine → OpenAI API
+                        ↓                                        ↓
+                   DynamoDB (Context)                     DALL-E (Images)
+```
+
+### 🔄 4-Stage Workflow Engine
+
+```
+1. Intent Analysis (OpenAI)
+   ↓
+2. Task Planning 
+   ↓
+3. Direct Execution & Response
+   ├── Text Generation (Streaming)
+   ├── Image Generation (Instant Upload)
+   ├── Image Analysis (Vision)
+   └── Thread Summarization
+   ↓
+4. Completion Notification
 ```
 
 ### Key Components
 
-- **`handler.py`**: Main Lambda entry point and event processing
-- **`src/handlers/message_handler.py`**: Core message processing logic
-- **`src/api/slack_api.py`**: Slack API wrapper with caching
+#### Core System
+- **`handler.py`**: Main Lambda entry point with 4-stage workflow support
+- **`src/handlers/message_handler.py`**: Simplified workflow-centered message handling
+- **`src/api/slack_api.py`**: Slack API wrapper with caching and file upload
 - **`src/api/openai_api.py`**: OpenAI API wrapper with retry logic
-- **`src/utils/context_manager.py`**: DynamoDB context management
+- **`src/utils/context_manager.py`**: DynamoDB context management with TTL
 - **`src/utils/logger.py`**: Structured logging utilities
 - **`src/config/settings.py`**: Environment configuration
 
+#### Workflow Engine
+- **`src/workflow/workflow_engine.py`**: 4-stage intelligent workflow processor
+- **`src/workflow/task_executor.py`**: Individual task execution engine
+- **`src/workflow/slack_utils.py`**: Slack integration utilities
+
 ### Data Flow
 
-1. Slack sends events to API Gateway endpoint
-2. Lambda validates and processes events
-3. Context stored in DynamoDB for duplicate prevention
-4. Messages processed through OpenAI API
-5. Responses streamed back to Slack in real-time
-6. Context automatically expires after 1 hour
+#### Simple Requests
+1. Slack sends events to API Gateway
+2. Lambda processes through basic workflow
+3. Single task execution and immediate response
+
+#### Complex Requests  
+1. **Stage 1**: OpenAI analyzes user intent and required tasks
+2. **Stage 2**: Tasks planned based on bot capabilities
+3. **Stage 3**: Each task executed and results sent immediately to Slack
+   - Text responses: Real-time streaming
+   - Images: Generated, downloaded, and uploaded instantly
+   - Analysis: Vision processing with immediate results
+4. **Stage 4**: Completion notification
+5. Context stored in DynamoDB for thread continuity
 
 ## Troubleshooting
 

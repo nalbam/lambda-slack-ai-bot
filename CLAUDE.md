@@ -1,6 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# lambda-slack-ai-bot Development Guide
 
 ## Commands
 
@@ -19,33 +17,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a serverless Slack bot built on AWS Lambda that integrates with OpenAI's GPT and DALL-E models.
+This is a serverless Slack bot built on AWS Lambda with a **4-Stage Intelligent Workflow Engine** that integrates with OpenAI's GPT-4o, DALL-E 3, and Vision models.
+
+### 🔄 4-Stage Workflow Engine
+
+**Stage 1: Intent Analysis**
+- OpenAI analyzes user message + bot capabilities
+- Identifies required tasks for complex requests
+- Handles multi-part requests like "AI 설명하고 로봇 이미지도 그려줘"
+
+**Stage 2: Task Planning**
+- Converts analysis into executable task list
+- Adds context (thread history, uploaded images)
+- Determines execution order and dependencies
+
+**Stage 3: Direct Execution & Response**
+- Executes tasks and sends results immediately to Slack
+- No AI summarization or aggregation
+- Real-time streaming for text, instant upload for images
+- Thread summarization with intelligent analysis
+
+**Stage 4: Completion Notification**
+- Simple completion message
+- Performance logging
 
 ### Core Components
 
-1. **AWS Lambda Function** (`handler.py`): Main entry point that processes Slack events
-2. **Message Handler** (`src/handlers/message_handler.py`): Handles conversation logic and AI integration
-3. **API Layer** (`src/api/`): Interfaces with Slack and OpenAI APIs
-4. **Configuration** (`src/config/settings.py`): Environment variables and app settings
-5. **Utilities** (`src/utils/`): Logging, context management, and DynamoDB operations
+1. **AWS Lambda Function** (`handler.py`): Main entry point with 4-stage workflow support
+2. **Workflow Engine** (`src/workflow/`):
+   - `workflow_engine.py`: 4-stage workflow processor
+   - `task_executor.py`: Individual task execution
+   - `slack_utils.py`: Slack integration utilities
+3. **Message Handler** (`src/handlers/message_handler.py`): Simplified workflow-centered handler
+4. **API Layer** (`src/api/`): Slack and OpenAI API interfaces
+5. **Configuration** (`src/config/settings.py`): Environment variables and settings
+6. **Utilities** (`src/utils/`): Logging, context management, DynamoDB operations
 
 ### Data Flow
 
-1. Slack → API Gateway → Lambda (`handler.lambda_handler`)
-2. Event validation and duplicate prevention using DynamoDB
-3. Message processing in `MessageHandler` class
-4. OpenAI API calls for text generation or image creation
-5. Response streaming back to Slack
+#### Simple Requests (Single Task)
+1. Slack → API Gateway → Lambda → Basic workflow processing
+2. Single task execution → Immediate response
+
+#### Complex Requests (Multi-Task)
+1. Slack → API Gateway → Lambda → **4-Stage Workflow Engine**
+2. **Stage 1**: OpenAI intent analysis → Task identification
+3. **Stage 2**: Task planning with context
+4. **Stage 3**: Execute each task → Send results immediately to Slack
+5. **Stage 4**: Completion notification
+6. Context stored in DynamoDB for thread continuity
 
 ### Key Features
 
-- **Conversation Context**: Maintains thread context using DynamoDB with TTL
-- **Streaming Responses**: Real-time text generation with periodic updates
-- **Image Generation**: DALL-E integration triggered by "그려줘" keyword
-- **Image Description**: GPT-4 Vision for describing uploaded images
-- **Message Splitting**: Handles Slack's message size limits automatically
+- **Complex Multi-Task Support**: "AI 설명하고 로봇 이미지도 그려줘" → Text + Image generation
+- **Instant Response**: No AI summarization, results sent immediately as completed
+- **Streaming Text**: Real-time text generation with 800-character updates
+- **Instant Images**: Generated images uploaded directly to Slack
+- **Korean-English Translation**: Automatic translation for DALL-E prompts
+- **Thread Context**: Maintains conversation history using DynamoDB with TTL
+- **Error Isolation**: Failed tasks don't block other tasks
 
 ## Code Patterns
+
+### Workflow Components
+- **WorkflowEngine**: Main 4-stage coordinator with intent analysis and task planning
+- **TaskExecutor**: Handles text_generation, image_generation, image_analysis, thread_summary
+- **SlackMessageUtils**: Streaming responses and file uploads with error handling
 
 ### Environment Variables
 - Required vars: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `OPENAI_API_KEY`
@@ -55,17 +92,18 @@ This is a serverless Slack bot built on AWS Lambda that integrates with OpenAI's
 ### Error Handling
 - Use try/except blocks with specific exceptions
 - Always log errors with context using `logger.log_error()`
-- Return meaningful error messages to users
+- Workflow errors fall back to basic processing
+- Task-level error isolation
 
 ### Naming Conventions
-- Functions: `snake_case` (e.g., `lambda_handler`, `get_context`)
+- Functions: `snake_case` (e.g., `lambda_handler`, `execute_and_respond_tasks`)
 - Constants: `UPPER_CASE` (e.g., `SLACK_BOT_TOKEN`, `IMAGE_MODEL`)
-- Classes: `PascalCase` (e.g., `MessageHandler`)
+- Classes: `PascalCase` (e.g., `WorkflowEngine`, `TaskExecutor`)
 
 ### Message Processing
-- All Slack messages go through `MessageHandler` class
-- Content type detection: "text", "image", "emoji"
-- Thread handling with conversation history
+- All requests processed through workflow-centered `MessageHandler`
+- Complex requests → 4-stage workflow
+- Simple requests → Basic processing
 - Streaming responses with buffer management
 
 ### DynamoDB Integration
@@ -75,18 +113,34 @@ This is a serverless Slack bot built on AWS Lambda that integrates with OpenAI's
 
 ## Development Guidelines
 
-### Adding New Features
-1. Extend `MessageHandler` class for new conversation types
-2. Add configuration to `settings.py` if needed
-3. Update serverless.yml for new AWS resources
-4. Test with both Slack events and OpenAI API responses
+### Adding New Task Types
+1. Add new task type to `TaskExecutor.execute_single_task()`
+2. Implement corresponding `_execute_[task_type]()` method
+3. Update workflow engine prompts to include new task type
+4. Update `WorkflowEngine._send_task_result()` for response handling
+5. Add fallback logic in `WorkflowEngine.create_fallback_intent()`
+6. Update bot capabilities in `WorkflowEngine.load_bot_capabilities()`
 
-### Modifying AI Behavior
-- Adjust prompts in `settings.py` (COMMAND_DESCRIBE, COMMAND_GENERATE)
-- Modify system message via SYSTEM_MESSAGE environment variable
- - Temperature and model settings configurable via environment
+### Code Quality Guidelines
+- All Python files pass syntax validation and follow PEP-8
+- Unused functions and constants have been removed for maintainability
+- Import statements are organized: standard library → third-party → local modules
+- Error handling with specific exception types and comprehensive logging
+- No circular imports or unused dependencies
 
-### File Structure
-- Keep handlers under 500 lines (current MessageHandler is at ~500 lines)
-- Separate API logic from business logic
-- Use utility modules for shared functionality
+### Modifying Workflow Behavior
+- Intent analysis prompt in `WorkflowEngine.analyze_user_intent()`
+- Task planning logic in `WorkflowEngine.create_task_list()`
+- Response handling in `WorkflowEngine._send_task_result()`
+
+### File Structure Guidelines
+- Keep workflow files focused and under 500 lines
+- Separate workflow logic from basic Slack/OpenAI integration
+- Use utility modules for shared Slack operations
+- Maintain clear separation between stages
+
+### Performance Considerations
+- Workflow engine processes complex requests only
+- Simple requests use fast basic processing
+- Streaming responses for better UX
+- Immediate task result delivery (no aggregation delay)

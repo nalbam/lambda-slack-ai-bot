@@ -14,14 +14,6 @@ logging.basicConfig(
 # 로거 인스턴스 생성
 logger = logging.getLogger('lambda-slack-ai-bot')
 
-def setup_logger(level: int = logging.INFO) -> None:
-    """로거 레벨을 설정합니다.
-
-    Args:
-        level: 로깅 레벨 (logging.DEBUG, logging.INFO 등)
-    """
-    logger.setLevel(level)
-
 def log_info(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     """INFO 레벨 로그를 기록합니다.
 
