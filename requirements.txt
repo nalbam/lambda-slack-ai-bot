@@ -1,7 +1,7 @@
-boto3>=1.28.0
-openai>=1.6.0
-slack-bolt>=1.18.0
-slack-sdk>=3.23.0
-requests>=2.31.0
-tenacity>=8.2.3
+boto3>=1.38.45
+openai>=1.92.2
+slack-bolt>=1.23.0
+slack-sdk>=3.35.0
+requests>=2.32.4
+tenacity>=8.5.0
 google-genai>=1.22.0
