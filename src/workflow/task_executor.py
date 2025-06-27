@@ -423,10 +423,27 @@ class TaskExecutor:
         try:
             prompt = task['input']
             
+            logger.log_info("Gemini 이미지 생성 시작", {
+                "task_id": task['id'],
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "model": settings.GEMINI_IMAGE_MODEL
+            })
+            
             # Gemini Imagen으로 이미지 생성 시도
             response = gemini_api.generate_image(
                 prompt=prompt
             )
+            
+            logger.log_info("Gemini API 응답 받음", {
+                "task_id": task['id'],
+                "response_keys": list(response.keys()) if response else [],
+                "has_images": bool(response.get('images')),
+                "has_candidates": bool(response.get('candidates')),
+                "has_generated_images": bool(response.get('generated_images')),
+                "images_count": len(response.get('images', [])),
+                "candidates_count": len(response.get('candidates', [])),
+                "generated_images_count": len(response.get('generated_images', []))
+            })
             
             # 성공한 경우 이미지 처리
             if response.get('images') and len(response['images']) > 0:
@@ -434,7 +451,8 @@ class TaskExecutor:
                 
                 logger.log_info("Gemini 이미지 생성 완료", {
                     "task_id": task['id'],
-                    "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt
+                    "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt,
+                    "image_data_type": type(image_data).__name__
                 })
                 
                 return {
@@ -444,10 +462,23 @@ class TaskExecutor:
                     'model': 'imagen-3.0'
                 }
             else:
+                logger.log_warning("Gemini 이미지 생성 응답에 이미지가 없음", {
+                    "task_id": task['id'],
+                    "response_structure": {
+                        "images": response.get('images'),
+                        "candidates": response.get('candidates'),
+                        "generated_images": response.get('generated_images')
+                    }
+                })
                 raise Exception("생성된 이미지가 없습니다")
                 
         except Exception as e:
-            logger.log_warning(f"Gemini 이미지 생성 실패, DALL-E로 대체 실행: {str(e)}")
+            logger.log_warning("Gemini 이미지 생성 실패, DALL-E로 대체 실행", {
+                "task_id": task['id'],
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
+            })
             
             # Gemini 이미지 생성 실패 시 자동으로 DALL-E로 대체
             error_message = str(e).lower()
