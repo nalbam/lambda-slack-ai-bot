@@ -35,6 +35,7 @@ This is a serverless Slack bot built on AWS Lambda with a **4-Stage Intelligent 
 - Executes tasks and sends results immediately to Slack
 - No AI summarization or aggregation
 - Real-time streaming for text, instant upload for images
+- Thread summarization with intelligent analysis
 
 **Stage 4: Completion Notification**
 - Simple completion message
@@ -79,9 +80,9 @@ This is a serverless Slack bot built on AWS Lambda with a **4-Stage Intelligent 
 ## Code Patterns
 
 ### Workflow Components
-- **WorkflowEngine**: Main 4-stage coordinator
-- **TaskExecutor**: Handles text_generation, image_generation, image_analysis
-- **SlackMessageUtils**: Streaming responses and file uploads
+- **WorkflowEngine**: Main 4-stage coordinator with intent analysis and task planning
+- **TaskExecutor**: Handles text_generation, image_generation, image_analysis, thread_summary
+- **SlackMessageUtils**: Streaming responses and file uploads with error handling
 
 ### Environment Variables
 - Required vars: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `OPENAI_API_KEY`
@@ -115,8 +116,17 @@ This is a serverless Slack bot built on AWS Lambda with a **4-Stage Intelligent 
 ### Adding New Task Types
 1. Add new task type to `TaskExecutor.execute_single_task()`
 2. Implement corresponding `_execute_[task_type]()` method
-3. Update `WorkflowEngine._send_task_result()` for response handling
-4. Update bot capabilities in `docs/bot-capabilities.md`
+3. Update workflow engine prompts to include new task type
+4. Update `WorkflowEngine._send_task_result()` for response handling
+5. Add fallback logic in `WorkflowEngine.create_fallback_intent()`
+6. Update bot capabilities in `WorkflowEngine.load_bot_capabilities()`
+
+### Code Quality Guidelines
+- All Python files pass syntax validation and follow PEP-8
+- Unused functions and constants have been removed for maintainability
+- Import statements are organized: standard library → third-party → local modules
+- Error handling with specific exception types and comprehensive logging
+- No circular imports or unused dependencies
 
 ### Modifying Workflow Behavior
 - Intent analysis prompt in `WorkflowEngine.analyze_user_intent()`

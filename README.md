@@ -17,6 +17,7 @@ A serverless Slack bot powered by OpenAI's GPT and DALL-E models, built with AWS
 - **Complex Request Handling**: Processes multi-part requests like "Explain AI and draw a robot image"
 - **Image Generation**: Create images using DALL-E 3 with smart Korean-to-English translation
 - **Image Analysis**: Describes uploaded images using GPT-4 Vision
+- **Thread Summarization**: Intelligent summarization of thread conversations
 - **Real-time Streaming**: Live text response updates as AI generates content
 
 ### 💬 Slack Integration
@@ -116,6 +117,7 @@ The bot can handle sophisticated requests that combine multiple actions:
 @botname AI에 대해 설명하고 로봇 이미지도 그려줘
 @botname 머신러닝 알고리즘을 요약하고 관련 다이어그램도 만들어줘
 @botname [upload code screenshot] 이 코드를 분석하고 개선 방안도 써줘
+@botname 스레드 요약해줘
 ```
 
 ### 💬 Simple Conversations
@@ -147,12 +149,25 @@ Upload images and get detailed analysis:
 @botname [upload code screenshot] Explain this code
 ```
 
-### 🧵 Thread Conversations
+### 🧵 Thread Conversations & Summarization
 Reply in threads for contextual conversations. The bot remembers:
 - Previous messages in the thread
 - User reactions (for emoji responses)  
 - Uploaded images and analysis results
 - Multi-step task progress
+
+**Thread Summarization:**
+```
+@botname 스레드 요약해줘
+@botname summarize this thread
+@botname 이 스레드 내용 정리해줘
+```
+
+The bot will analyze all messages in the current thread and provide:
+- Key topics and main points
+- Important decisions or conclusions
+- Participant opinions and perspectives
+- Organized summary in 3-5 paragraphs
 
 ## Deployment
 
@@ -236,7 +251,8 @@ Slack → API Gateway → Lambda → 4-Stage Workflow Engine → OpenAI API
 3. Direct Execution & Response
    ├── Text Generation (Streaming)
    ├── Image Generation (Instant Upload)
-   └── Image Analysis (Vision)
+   ├── Image Analysis (Vision)
+   └── Thread Summarization
    ↓
 4. Completion Notification
 ```
