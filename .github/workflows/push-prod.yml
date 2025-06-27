@@ -21,6 +21,7 @@ env:
   TEMPERATURE: ${{ vars.TEMPERATURE }}
 
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
