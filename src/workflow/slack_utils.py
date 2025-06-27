@@ -123,19 +123,17 @@ class SlackMessageUtils:
         """이미지를 Slack에 업로드합니다."""
         
         try:
-            # 파일 업로드
-            slack_api.upload_file(
-                self.app, channel, image_data, filename, thread_ts
-            )
+            # 파일 업로드 (기존 방식 활용)
+            slack_api.upload_file(self.app, channel, image_data, filename, thread_ts)
 
-            # 프롬프트가 있는 경우 업데이트
+            # 프롬프트가 있는 경우 메시지 업데이트
             if prompt:
-                self.chat_update(say, channel, thread_ts, latest_ts, prompt)
+                slack_api.update_message(self.app, channel, latest_ts, prompt)
 
             return "이미지 업로드 완료"
 
         except Exception as e:
             logger.log_error("이미지 업로드 중 오류 발생", e)
             error_message = f"```이미지 업로드 오류: {str(e)}```"
-            self.chat_update(say, channel, thread_ts, latest_ts, error_message)
+            slack_api.update_message(self.app, channel, latest_ts, error_message)
             return error_message

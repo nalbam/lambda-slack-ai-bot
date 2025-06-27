@@ -302,16 +302,12 @@ JSON만 응답하세요.
                 )
                 
             elif result['type'] == 'image':
-                # 이미지 결과를 즉시 업로드
-                self.slack_utils.upload_image_to_slack(
-                    say=self.slack_context["say"],
-                    channel=self.slack_context["channel"],
-                    thread_ts=self.slack_context.get("thread_ts"),
-                    latest_ts=progress_ts,
-                    image_data=result['image_data'],
-                    filename=f"{task['id']}.png",
-                    prompt=f"🎨 {result.get('revised_prompt', '이미지 생성 완료')}"
-                )
+                # 이미지는 이미 TaskExecutor에서 Slack에 업로드됨
+                # 프롬프트 메시지만 업데이트
+                if result.get('revised_prompt'):
+                    self.update_progress(progress_ts, f"🎨 {result['revised_prompt']}")
+                else:
+                    self.update_progress(progress_ts, "🎨 이미지 생성 완료")
                 
             elif result['type'] == 'analysis':
                 # 분석 결과를 스트리밍으로 전송

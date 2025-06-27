@@ -4,6 +4,7 @@
 import time
 from typing import Dict, Any
 
+from src.config import settings
 from src.api import openai_api, slack_api
 from src.utils import logger
 from .slack_utils import SlackMessageUtils
@@ -78,7 +79,7 @@ class TaskExecutor:
             raise e
     
     def _execute_image_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """이미지 생성 실행 - 기존 함수 활용"""
+        """이미지 생성 실행 - 기존 함수 활용하여 Slack에 바로 업로드"""
         
         try:
             # DALL-E 프롬프트 생성 (한국어 → 영어 변환)
@@ -100,25 +101,49 @@ class TaskExecutor:
             
             # DALL-E 이미지 생성
             image_result = openai_api.generate_image(english_prompt)
+            image_url = image_result["image_url"]
+            revised_prompt = image_result["revised_prompt"]
             
-            # 이미지 다운로드
-            image_data = slack_api.get_image_from_slack(image_result["image_url"])
+            # 이미지 다운로드 (기존 코드 방식 활용)
+            file_ext = image_url.split(".")[-1].split("?")[0]
+            filename = f"{settings.IMAGE_MODEL}.{file_ext}"
             
-            if not image_data:
+            file_data = slack_api.get_image_from_slack(image_url)
+            if not file_data:
+                # 직접 다운로드 시도
+                try:
+                    import requests
+                    response = requests.get(image_url)
+                    if response.status_code == 200:
+                        file_data = response.content
+                except Exception as e:
+                    logger.log_error("이미지 다운로드 중 오류 발생", e)
+                    raise Exception("이미지를 다운로드할 수 없습니다.")
+            
+            if not file_data:
                 raise Exception("이미지 다운로드 실패")
             
-            logger.log_info("이미지 생성 완료", {
+            # Slack에 바로 업로드
+            slack_api.upload_file(
+                self.app, 
+                self.slack_context["channel"], 
+                file_data, 
+                filename, 
+                self.slack_context.get("thread_ts")
+            )
+            
+            logger.log_info("이미지 생성 및 업로드 완료", {
                 "task_id": task['id'],
                 "prompt": english_prompt,
-                "revised_prompt": image_result["revised_prompt"]
+                "revised_prompt": revised_prompt
             })
             
             return {
                 'type': 'image',
-                'image_data': image_data,
-                'image_url': image_result["image_url"],
-                'revised_prompt': image_result["revised_prompt"],
-                'original_prompt': task['input']
+                'uploaded': True,
+                'revised_prompt': revised_prompt,
+                'original_prompt': task['input'],
+                'filename': filename
             }
             
         except Exception as e:
