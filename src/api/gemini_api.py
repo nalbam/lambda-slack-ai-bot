@@ -90,7 +90,8 @@ class GeminiAPI:
                 "model": model,
                 "messages_count": len(messages),
                 "stream": stream,
-                "temperature": temperature
+                "temperature": temperature,
+                "max_tokens": max_tokens
             })
             
             # google-genai SDK 사용
@@ -113,11 +114,17 @@ class GeminiAPI:
                 }]
             }
             
-            logger.log_info("Gemini 텍스트 생성 완료")
+            logger.log_info("Gemini 텍스트 생성 완료", {
+                "response_length": len(response.text) if response.text else 0
+            })
             return result
                 
         except Exception as e:
-            logger.log_error("Gemini 텍스트 생성 중 오류 발생", e)
+            logger.log_error("Gemini 텍스트 생성 중 오류 발생", e, {
+                "model": model,
+                "messages_count": len(messages),
+                "temperature": temperature
+            })
             
             # API 키 오류인 경우 더 명확한 메시지 제공
             if "API key not valid" in str(e) or "INVALID_ARGUMENT" in str(e):
@@ -167,9 +174,11 @@ class GeminiAPI:
             )
             
         try:
-            logger.log_info("Gemini 이미지 생성 요청", {
+            logger.log_info("Gemini 이미진 생성 요청", {
                 "model": model,
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "aspect_ratio": aspect_ratio,
+                "person_generation": person_generation
             })
             
             # 모든 이미지 생성은 generate_images API 사용
@@ -185,14 +194,21 @@ class GeminiAPI:
                 config=config
             )
             
-            logger.log_info("Gemini 이미지 생성 완료")
+            candidates = response.candidates if hasattr(response, 'candidates') else []
+            logger.log_info("Gemini 이미지 생성 완료", {
+                "candidates_count": len(candidates)
+            })
             return {
-                "candidates": response.candidates if hasattr(response, 'candidates') else [],
-                "images": [img for img in response.candidates] if hasattr(response, 'candidates') else []
+                "candidates": candidates,
+                "images": candidates
             }
                 
         except Exception as e:
-            logger.log_error("Gemini 이미지 생성 중 오류 발생", e)
+            logger.log_error("Gemini 이미지 생성 중 오류 발생", e, {
+                "model": model,
+                "prompt_length": len(prompt),
+                "aspect_ratio": aspect_ratio
+            })
             
             # 지원되지 않는 기능인 경우 DALL-E 대체 사용 안내
             if "not enabled" in str(e) or "not supported" in str(e) or "allowlist" in str(e) or "403" in str(e):
@@ -252,7 +268,8 @@ class GeminiAPI:
             logger.log_info("Gemini 비디오 생성 요청", {
                 "model": model,
                 "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-                "duration": duration_seconds
+                "duration": duration_seconds,
+                "aspect_ratio": aspect_ratio
             })
             
             # Veo 비디오 생성 설정
@@ -271,7 +288,11 @@ class GeminiAPI:
                 config=config
             )
             
-            logger.log_info("Gemini 비디오 생성 작업 시작됨", {"operation_name": operation.name if hasattr(operation, 'name') else 'unknown'})
+            operation_name = operation.name if hasattr(operation, 'name') else 'unknown'
+            logger.log_info("Gemini 비디오 생성 작업 시작됨", {
+                "operation_name": operation_name,
+                "duration": duration_seconds
+            })
             return {
                 "operation": operation,
                 "status": "processing",
@@ -279,7 +300,11 @@ class GeminiAPI:
             }
                 
         except Exception as e:
-            logger.log_error("Gemini 비디오 생성 중 오류 발생", e)
+            logger.log_error("Gemini 비디오 생성 중 오류 발생", e, {
+                "model": model,
+                "prompt_length": len(prompt),
+                "duration": duration_seconds
+            })
             
             # 지원되지 않는 기능인 경우 안내
             if "not enabled" in str(e) or "not supported" in str(e) or "allowlist" in str(e) or "403" in str(e):

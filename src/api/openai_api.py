@@ -54,12 +54,12 @@ def generate_chat_completion(
         if len(messages) > 10:
             log_messages = [messages[0], "...", messages[-1]]
 
-        logger.log_debug(f"OpenAI API 요청", {
+        logger.log_info(f"OpenAI API 요청", {
             "model": settings.OPENAI_MODEL,
             "messages_count": len(messages),
-            "messages": log_messages,
             "user": user,
-            "stream": stream
+            "stream": stream,
+            "temperature": temperature
         })
 
         response = openai_client.chat.completions.create(
@@ -69,11 +69,24 @@ def generate_chat_completion(
             stream=stream,
             user=user,
         )
+        
+        if not stream:
+            logger.log_info("OpenAI 채팅 API 응답 수신 완료", {
+                "response_id": getattr(response, 'id', 'unknown'),
+                "usage": getattr(response, 'usage', None)
+            })
+        else:
+            logger.log_info("OpenAI 채팅 API 스트리밍 시작")
 
         return response
 
     except Exception as e:
-        logger.log_error("OpenAI 채팅 API 호출 중 오류 발생", e)
+        logger.log_error("OpenAI 채팅 API 호출 중 오류 발생", e, {
+            "model": settings.OPENAI_MODEL,
+            "messages_count": len(messages),
+            "user": user,
+            "stream": stream
+        })
         raise OpenAIApiError(f"OpenAI API 오류: {str(e)}")
 
 @retry(
@@ -95,9 +108,11 @@ def generate_image(prompt: str) -> Dict[str, Any]:
         OpenAIApiError: API 호출 중 오류 발생 시
     """
     try:
-        logger.log_debug(f"OpenAI 이미지 생성 요청", {
+        logger.log_info(f"OpenAI 이미지 생성 요청", {
             "model": settings.IMAGE_MODEL,
-            "prompt": prompt
+            "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+            "size": settings.IMAGE_SIZE,
+            "quality": settings.IMAGE_QUALITY
         })
 
         response = openai_client.images.generate(

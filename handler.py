@@ -80,6 +80,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         Lambda 응답
     """
     try:
+        logger.log_info("Lambda 함수 시작", {
+            "request_id": context.aws_request_id,
+            "function_name": context.function_name,
+            "remaining_time": context.get_remaining_time_in_millis()
+        })
         # JSON 파싱
         if "body" in event:
             body = json.loads(event["body"])
@@ -119,10 +124,19 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             context_manager.put_context(token, user, body["event"]["text"])
 
         # Slack 이벤트 처리
-        return slack_handler.handle(event, context)
+        result = slack_handler.handle(event, context)
+        logger.log_info("Lambda 함수 완료", {
+            "status_code": result.get("statusCode", 200),
+            "remaining_time": context.get_remaining_time_in_millis()
+        })
+        return result
 
     except Exception as e:
-        logger.log_error("Lambda 핸들러 오류", e, {"event": event})
+        logger.log_error("Lambda 핸들러 오류", e, {
+            "request_id": context.aws_request_id,
+            "function_name": context.function_name,
+            "remaining_time": context.get_remaining_time_in_millis()
+        })
 
         return {
             "statusCode": 500,

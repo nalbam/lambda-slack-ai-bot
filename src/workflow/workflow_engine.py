@@ -24,6 +24,13 @@ class WorkflowEngine:
     def process_user_request(self, user_message: str, context: Dict[str, Any]) -> None:
         """4단계 워크플로우 메인 처리 함수"""
         
+        logger.log_info("워크플로우 요청 처리 시작", {
+            "user_id": context.get("user_id"),
+            "message_length": len(user_message),
+            "thread_length": context.get("thread_length", 0),
+            "has_uploaded_image": bool(context.get("uploaded_image"))
+        })
+        
         try:
             # 진행 상황 알림
             result = self.slack_context["say"](
@@ -35,10 +42,18 @@ class WorkflowEngine:
             # 1단계: 사용자 의도 파악
             logger.log_info("1단계: 사용자 의도 파악 시작")
             intent_data = self.analyze_user_intent(user_message, context)
+            logger.log_info("1단계 완료: 사용자 의도 분석", {
+                "intent": intent_data.get("user_intent", "unknown"),
+                "task_count": len(intent_data.get("required_tasks", []))
+            })
             
             # 2단계: 작업 나열  
             logger.log_info("2단계: 작업 나열 시작")
             task_list = self.create_task_list(intent_data, context)
+            logger.log_info("2단계 완료: 작업 목록 생성", {
+                "total_tasks": len(task_list),
+                "task_types": [task.get("type") for task in task_list]
+            })
             
             # 진행 상황 업데이트 및 예상 시간 안내
             estimated_time = intent_data.get('estimated_time', '알 수 없음')
@@ -49,11 +64,16 @@ class WorkflowEngine:
             self.execute_and_respond_tasks(task_list, latest_ts)
             
             logger.log_info("워크플로우 처리 완료", {
-                "total_tasks": len(task_list)
+                "total_tasks": len(task_list),
+                "user_id": context.get("user_id")
             })
             
         except Exception as e:
-            logger.log_error("워크플로우 처리 실패", e)
+            logger.log_error("워크플로우 처리 실패", e, {
+                "user_id": context.get("user_id"),
+                "message_length": len(user_message),
+                "step": "전체 워크플로우"
+            })
             self.handle_workflow_error(e, user_message, context)
     
     def analyze_user_intent(self, user_message: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -370,6 +390,11 @@ JSON만 응답하세요.
                 
                 # 작업 실행
                 start_time = time.time()
+                logger.log_info(f"작업 실행 시작: {task['id']}", {
+                    "type": task['type'],
+                    "description": task['description']
+                })
+                
                 result = self.task_executor.execute_single_task(task)
                 execution_time = time.time() - start_time
                 
@@ -378,19 +403,32 @@ JSON만 응답하세요.
                 
                 logger.log_info(f"작업 {task['id']} 완료 및 회신", {
                     "type": task['type'],
-                    "time": execution_time
+                    "execution_time_seconds": round(execution_time, 2),
+                    "result_type": result.get('type'),
+                    "success": result.get('success', True)
                 })
                 
             except Exception as e:
-                logger.log_error(f"작업 {task['id']} 실패", e)
+                logger.log_error(f"작업 {task['id']} 실패", e, {
+                    "task_type": task.get('type'),
+                    "task_description": task.get('description'),
+                    "task_index": i + 1,
+                    "total_tasks": len(task_list)
+                })
                 # 에러 메시지 즉시 전송
                 self.update_progress(progress_ts, f"❌ {task['description']} 처리 중 오류 발생: {str(e)}")
         
         # 모든 작업 완료 메시지
         self.update_progress(progress_ts, "✅ 모든 작업이 완료되었습니다.")
+        logger.log_info("전체 작업 완료", {"total_tasks": len(task_list)})
     
     def _send_task_result(self, result: Dict[str, Any], task: Dict[str, Any], progress_ts: str) -> None:
         """작업 결과를 즉시 Slack에 새로운 메시지로 전송"""
+        
+        logger.log_info(f"작업 결과 전송 시작: {task['id']}", {
+            "result_type": result.get('type'),
+            "task_type": task.get('type')
+        })
         
         try:
             if result['type'] == 'text':
@@ -456,7 +494,11 @@ JSON만 응답하세요.
                 )
                 
         except Exception as e:
-            logger.log_error("작업 결과 전송 실패", e)
+            logger.log_error("작업 결과 전송 실패", e, {
+                "task_id": task.get('id'),
+                "result_type": result.get('type'),
+                "task_type": task.get('type')
+            })
             # 오류도 새로운 메시지로 전송
             self.slack_context["say"](
                 text=f"❌ 작업 결과 전송 중 오류 발생: {str(e)}", 
@@ -474,8 +516,12 @@ JSON만 응답하세요.
                 message_ts,
                 text
             )
+            logger.log_debug("진행 상황 업데이트 완료")
         except Exception as e:
-            logger.log_error("진행 상황 업데이트 실패", e)
+            logger.log_error("진행 상황 업데이트 실패", e, {
+                "message_ts": message_ts,
+                "text_length": len(text)
+            })
     
     def load_bot_capabilities(self) -> str:
         """봇 능력 목록 로드"""

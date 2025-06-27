@@ -30,6 +30,13 @@ class MessageHandler:
         event = body.get("event", {})
         parsed_event = slack_api.parse_slack_event(event, self.bot_id)
         
+        logger.log_info("멘션 처리 시작", {
+            "user": parsed_event["user"],
+            "channel": parsed_event["channel"],
+            "text_length": len(parsed_event["text"]),
+            "has_thread": bool(parsed_event.get("thread_ts"))
+        })
+        
         try:
             # 컨텍스트 준비
             context = self._prepare_context(parsed_event, event)
@@ -47,7 +54,11 @@ class MessageHandler:
             self._process_with_workflow(parsed_event["text"], context, slack_context)
             
         except Exception as e:
-            logger.log_error("멘션 처리 실패", e)
+            logger.log_error("멘션 처리 실패", e, {
+                "user": parsed_event.get("user"),
+                "channel": parsed_event.get("channel"),
+                "text": parsed_event.get("text", "")[:100]
+            })
             self._send_error_message(say, parsed_event.get("thread_ts"), 
                                    "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다.")
 
@@ -62,9 +73,16 @@ class MessageHandler:
 
         # 봇 메시지 무시
         if "bot_id" in event:
+            logger.log_debug("봇 메시지 무시")
             return
 
         parsed_event = slack_api.parse_slack_event(event, self.bot_id)
+        
+        logger.log_info("DM 처리 시작", {
+            "user": parsed_event["user"],
+            "channel": parsed_event["channel"],
+            "text_length": len(parsed_event["text"])
+        })
         
         try:
             # 컨텍스트 준비 (DM은 스레드 없음)
@@ -84,7 +102,11 @@ class MessageHandler:
             self._process_with_workflow(parsed_event["text"], context, slack_context)
             
         except Exception as e:
-            logger.log_error("DM 처리 실패", e)
+            logger.log_error("DM 처리 실패", e, {
+                "user": parsed_event.get("user"),
+                "channel": parsed_event.get("channel"),
+                "text": parsed_event.get("text", "")[:100]
+            })
             self._send_error_message(say, None, 
                                    "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다.")
 
@@ -169,14 +191,25 @@ class MessageHandler:
     def _process_with_workflow(self, user_message: str, context: Dict[str, Any], slack_context: Dict[str, Any]) -> None:
         """워크플로우 엔진으로 요청 처리"""
         
+        logger.log_info("워크플로우 엔진 시작", {
+            "user_id": context.get("user_id"),
+            "thread_length": context.get("thread_length", 0),
+            "has_uploaded_image": bool(context.get("uploaded_image"))
+        })
+        
         try:
             from src.workflow.workflow_engine import WorkflowEngine
             
             engine = WorkflowEngine(self.app, slack_context)
             engine.process_user_request(user_message, context)
             
+            logger.log_info("워크플로우 엔진 완료")
+            
         except Exception as e:
-            logger.log_error("워크플로우 엔진 실행 실패", e)
+            logger.log_error("워크플로우 엔진 실행 실패", e, {
+                "user_id": context.get("user_id"),
+                "message_length": len(user_message)
+            })
             # 최후 수단: 간단한 에러 메시지
             self._send_error_message(
                 slack_context["say"], 
@@ -189,5 +222,6 @@ class MessageHandler:
         
         try:
             say(text=f"⚠️ {message}", thread_ts=thread_ts)
+            logger.log_info("에러 메시지 전송 완료")
         except Exception as e:
             logger.log_error("에러 메시지 전송 실패", e)

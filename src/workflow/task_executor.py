@@ -26,7 +26,11 @@ class TaskExecutor:
         task_type = task['type']
         task_id = task['id']
         
-        logger.log_info(f"작업 실행 시작: {task_id}", {"type": task_type})
+        logger.log_info(f"작업 실행 시작: {task_id}", {
+            "type": task_type,
+            "description": task.get('description', ''),
+            "priority": task.get('priority', 0)
+        })
         
         if task_type == 'text_generation':
             return self._execute_text_generation(task)
@@ -45,10 +49,24 @@ class TaskExecutor:
         elif task_type == 'gemini_image_analysis':
             return self._execute_gemini_image_analysis(task)
         else:
+            logger.log_error(f"지원하지 않는 작업 타입: {task_type}", None, {
+                "task_id": task_id,
+                "supported_types": [
+                    "text_generation", "image_generation", "image_analysis", 
+                    "thread_summary", "gemini_text_generation", "gemini_image_generation",
+                    "gemini_video_generation", "gemini_image_analysis"
+                ]
+            })
             raise ValueError(f"지원하지 않는 작업 타입: {task_type}")
     
     def _execute_text_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """텍스트 생성 실행 - 기존 함수 활용"""
+        
+        logger.log_info("텍스트 생성 시작", {
+            "task_id": task['id'],
+            "input_length": len(task['input']),
+            "has_context": bool(task.get('context'))
+        })
         
         # 메시지 준비
         messages = [{"role": "user", "content": task['input']}]
@@ -87,11 +105,20 @@ class TaskExecutor:
             }
             
         except Exception as e:
-            logger.log_error("텍스트 생성 실패", e, {"task_id": task['id']})
+            logger.log_error("텍스트 생성 실패", e, {
+                "task_id": task['id'],
+                "input_length": len(task['input']),
+                "messages_count": len(messages)
+            })
             raise e
     
     def _execute_image_generation(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """이미지 생성 실행 - 기존 함수 활용하여 Slack에 바로 업로드"""
+        
+        logger.log_info("이미지 생성 시작", {
+            "task_id": task['id'],
+            "input_text": task['input'][:100] + "..." if len(task['input']) > 100 else task['input']
+        })
         
         try:
             # DALL-E 프롬프트 생성 (한국어 → 영어 변환)
