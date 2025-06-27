@@ -1,5 +1,11 @@
 """
 Lambda Slack AI Bot - Lambda 핸들러
+5단계 워크플로우 엔진 통합 완료:
+1. 사용자 의도 파악 (OpenAI 분석)
+2. 작업 나열 (실행 계획 수립)
+3. 작업 처리 (순차 실행)
+4. 작업 취합 (결과 통합)
+5. 회신 (포맷팅 및 전송)
 """
 import json
 import sys
@@ -33,16 +39,21 @@ bot_id = slack_api.get_bot_id(app)
 # 이벤트 핸들러 등록
 @app.event("app_mention")
 def handle_mention(body: Dict[str, Any], say):
-    """앱 멘션 이벤트 핸들러"""
+    """앱 멘션 이벤트 핸들러 - 5단계 워크플로우 지원"""
     try:
-        logger.log_info("앱 멘션 이벤트 처리", {"event_id": body.get("event_id")})
+        event = body.get("event", {})
+        logger.log_info("앱 멘션 이벤트 처리", {
+            "event_id": body.get("event_id"),
+            "text": event.get("text", "")[:100],  # 처음 100자만 로깅
+            "workflow_capable": True
+        })
         message_handler.handle_mention(body, say)
     except Exception as e:
         logger.log_error("앱 멘션 처리 중 오류 발생", e)
 
 @app.event("message")
 def handle_message(body: Dict[str, Any], say):
-    """메시지 이벤트 핸들러"""
+    """메시지 이벤트 핸들러 - 5단계 워크플로우 지원"""
     try:
         event = body.get("event", {})
 
@@ -50,7 +61,11 @@ def handle_message(body: Dict[str, Any], say):
         if "bot_id" in event:
             return
 
-        logger.log_info("메시지 이벤트 처리", {"event_id": body.get("event_id")})
+        logger.log_info("메시지 이벤트 처리", {
+            "event_id": body.get("event_id"),
+            "text": event.get("text", "")[:100],  # 처음 100자만 로깅
+            "workflow_capable": True
+        })
         message_handler.handle_message(body, say)
     except Exception as e:
         logger.log_error("메시지 처리 중 오류 발생", e)
