@@ -574,30 +574,71 @@ class TaskExecutor:
         try:
             prompt = task['input']
             duration = task.get('duration', 5)  # 기본 5초
+            aspect_ratio = task.get('aspect_ratio', '16:9')  # 기본 16:9
+            
+            logger.log_info("Gemini 비디오 생성 시작", {
+                "task_id": task['id'],
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+                "model": settings.GEMINI_VIDEO_MODEL
+            })
             
             # Gemini Veo로 비디오 생성 시도
             response = gemini_api.generate_video(
                 prompt=prompt,
-                duration_seconds=duration
+                duration_seconds=duration,
+                aspect_ratio=aspect_ratio
             )
             
-            # 비디오 생성은 비동기 작업이므로 작업 시작 알림
-            logger.log_info("Gemini 비디오 생성 작업 시작", {
+            logger.log_info("Gemini 비디오 API 응답 받음", {
                 "task_id": task['id'],
-                "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt
+                "response_keys": list(response.keys()) if response else [],
+                "operation_name": response.get('operation_name'),
+                "operation_id": response.get('operation_id'),
+                "status": response.get('status'),
+                "has_operation": bool(response.get('operation')),
+                "operation_done": getattr(response.get('operation'), 'done', None) if response.get('operation') else None
+            })
+            
+            # 비디오 생성은 비동기 작업이므로 작업 시작 알림
+            logger.log_info("Gemini 비디오 생성 작업 시작 완료", {
+                "task_id": task['id'],
+                "prompt": prompt[:50] + "..." if len(prompt) > 50 else prompt,
+                "duration": duration,
+                "operation_info": {
+                    "name": response.get('operation_name'),
+                    "id": response.get('operation_id'),
+                    "status": response.get('status')
+                }
             })
             
             return {
                 'type': 'text',
-                'content': f"🎬 Gemini Veo로 비디오 생성을 시작했습니다.\n📝 프롬프트: {prompt}\n⏱️ 예상 소요 시간: 1-3분\n\n{response.get('message', '비디오 생성이 진행 중입니다.')}",
-                'model': 'veo-2.0'
+                'content': f"🎬 Gemini Veo로 비디오 생성을 시작했습니다.\n📝 프롬프트: {prompt}\n⏱️ 예상 소요 시간: 1-3분\n🎥 길이: {duration}초\n🖼️ 비율: {aspect_ratio}\n\n{response.get('message', '비디오 생성이 진행 중입니다.')}",
+                'model': settings.GEMINI_VIDEO_MODEL,
+                'operation_info': response
             }
                 
         except Exception as e:
-            logger.log_warning(f"Gemini 비디오 생성 실패: {str(e)}")
+            logger.log_warning("Gemini 비디오 생성 실패", {
+                "task_id": task['id'],
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "duration": duration,
+                "aspect_ratio": aspect_ratio
+            })
             
             # allowlist 오류인 경우 안내
-            if "allowlist" in str(e) or "not enabled" in str(e) or "not supported" in str(e):
+            error_message = str(e).lower()
+            if any(keyword in error_message for keyword in [
+                "allowlist", "not enabled", "not supported", "403", "unauthorized", "invalid_argument"
+            ]):
+                logger.log_info("비디오 생성 allowlist 오류 - 사용 불가 안내", {
+                    "task_id": task['id'],
+                    "error_keywords": [k for k in ["allowlist", "not enabled", "not supported", "403", "unauthorized"] if k in error_message]
+                })
                 return {
                     'type': 'text',
                     'content': "⚠️ Gemini Veo 비디오 생성은 현재 allowlist 뒤에 있어 일반적으로 사용할 수 없습니다.\n🎬 이 기능은 Google에서 승인된 개발자만 사용할 수 있습니다.\n💡 텍스트 생성이나 이미지 생성을 대신 시도해보세요.",
@@ -605,6 +646,10 @@ class TaskExecutor:
                 }
             else:
                 # 다른 오류는 사용자에게 표시
+                logger.log_error("Gemini 비디오 생성 예상치 못한 오류", e, {
+                    "task_id": task['id'],
+                    "prompt_length": len(prompt)
+                })
                 return {
                     'type': 'text',
                     'content': f"❌ Gemini 비디오 생성 오류: {str(e)}\n💡 텍스트 생성이나 이미지 생성을 대신 시도해보세요.",
