@@ -2,10 +2,10 @@
 Slack API 래퍼 모듈
 """
 
-import re
-import functools
-import requests
 import base64
+import functools
+import re
+import requests
 from typing import Dict, Any, List, Optional, Tuple, Callable
 
 from slack_bolt import App, Say
@@ -40,7 +40,7 @@ def initialize_slack_app() -> App:
         # Slack API 연결 확인 및 봇 ID 가져오기
         auth_test = app.client.api_call("auth.test")
         bot_id = auth_test["user_id"]
-        logger.log_info(f"Slack 앱 초기화 성공", {"bot_id": bot_id})
+        logger.log_info("Slack 앱 초기화 성공", {"bot_id": bot_id})
         return app
     except Exception as e:
         logger.log_error("Slack 앱 초기화 중 오류 발생", e)
@@ -177,7 +177,7 @@ def get_image_from_slack(image_url: str) -> Optional[bytes]:
             return response.content
         else:
             logger.log_error(
-                f"이미지 다운로드 실패",
+                "이미지 다운로드 실패",
                 None,
                 {"url": image_url, "status_code": response.status_code},
             )

@@ -3,6 +3,7 @@ OpenAI API 래퍼 모듈
 """
 
 import functools
+import requests
 from typing import List, Dict, Any, Optional, Generator, Tuple, Union
 
 from openai import OpenAI
@@ -12,7 +13,6 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
-import requests
 
 from src.config import settings
 from src.utils import logger
@@ -66,7 +66,7 @@ def generate_chat_completion(
             log_messages = [messages[0], "...", messages[-1]]
 
         logger.log_info(
-            f"OpenAI API 요청",
+            "OpenAI API 요청",
             {
                 "model": settings.OPENAI_MODEL,
                 "messages_count": len(messages),
@@ -142,7 +142,7 @@ def generate_image(prompt: str) -> Dict[str, Any]:
     """
     try:
         logger.log_info(
-            f"OpenAI 이미지 생성 요청",
+            "OpenAI 이미지 생성 요청",
             {
                 "model": settings.IMAGE_MODEL,
                 "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,

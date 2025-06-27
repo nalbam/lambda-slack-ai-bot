@@ -5,6 +5,7 @@ Google Gemini API 래퍼 모듈 - google-genai SDK 사용
 import base64
 import time
 from typing import Dict, Any, List, Optional, Generator, Union
+
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -32,7 +33,7 @@ class GeminiApiError(Exception):
 class GeminiAPI:
     """Google Gemini API 클라이언트 - google-genai SDK 사용"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         if genai is None or types is None:
             raise ImportError(
                 "google-genai package is required. Install with: pip install google-genai"
