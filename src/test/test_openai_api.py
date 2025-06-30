@@ -6,6 +6,7 @@ OpenAI API 테스트 스크립트
 import os
 import sys
 import time
+import requests
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -43,7 +44,36 @@ class OpenAITester:
         if not self.api_key:
             print("❌ OPENAI_API_KEY가 설정되지 않았습니다.")
             sys.exit(1)
+        
+        # output 디렉토리 생성
+        self.output_dir = Path(__file__).parent / "output"
+        self.output_dir.mkdir(exist_ok=True)
+        
         print(f"✅ OpenAI API 키 확인 (키: {self.api_key[:10]}...)")
+        print(f"📁 이미지 저장 경로: {self.output_dir}")
+    
+    def download_and_save_image(self, image_url: str, filename: str) -> str:
+        """이미지를 다운로드하고 저장합니다.
+        
+        Args:
+            image_url: 다운로드할 이미지 URL
+            filename: 저장할 파일명
+            
+        Returns:
+            저장된 파일의 전체 경로
+        """
+        try:
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+            
+            file_path = self.output_dir / filename
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            
+            return str(file_path)
+        except Exception as e:
+            print(f"⚠️ 이미지 다운로드 실패: {e}")
+            return ""
     
     def test_text_generation(self) -> Dict[str, Any]:
         """텍스트 생성 테스트"""
@@ -119,22 +149,33 @@ class OpenAITester:
                 print(f"\n🖼️ 테스트 {i}: {prompt}")
                 
                 start_time = time.time()
-                response = generate_image(prompt, user="test_user")
+                response = generate_image(prompt)
                 end_time = time.time()
+                
+                # 이미지 다운로드 및 저장
+                image_url = response.get("image_url")
+                saved_path = ""
+                if image_url:
+                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                    filename = f"openai_test_{i}_{timestamp}.png"
+                    saved_path = self.download_and_save_image(image_url, filename)
                 
                 result = {
                     "test_number": i,
                     "success": True,
                     "prompt": prompt,
                     "response_time": round(end_time - start_time, 2),
-                    "image_url": response.data[0].url if response.data else None,
-                    "revised_prompt": getattr(response.data[0], 'revised_prompt', None) if response.data else None
+                    "image_url": image_url,
+                    "revised_prompt": response.get("revised_prompt"),
+                    "saved_path": saved_path
                 }
                 
                 print(f"✅ 성공 - {result['response_time']}초")
                 print(f"🔗 이미지 URL: {result['image_url']}")
                 if result['revised_prompt']:
                     print(f"📝 수정된 프롬프트: {result['revised_prompt'][:100]}...")
+                if saved_path:
+                    print(f"💾 저장된 파일: {saved_path}")
                 
                 results.append(result)
                 

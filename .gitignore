@@ -23,6 +23,7 @@ $RECYCLE.BIN/
 .metadata/
 
 # Build
+output/
 target/
 build/
 dist/
