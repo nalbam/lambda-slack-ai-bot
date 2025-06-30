@@ -287,17 +287,23 @@ class GeminiAPI:
         model: Optional[str] = None,
         duration_seconds: int = 5,
         aspect_ratio: str = "16:9",
+        person_generation: str = "allow_adult",
+        enhance_prompt: bool = True,
+        number_of_videos: int = 1,
     ) -> Dict[str, Any]:
         """Gemini Veo를 사용하여 비디오를 생성합니다.
 
         Args:
             prompt: 비디오 생성 프롬프트
             model: 사용할 모델 (기본값: veo-2.0-generate-001)
-            duration_seconds: 비디오 길이 (초)
-            aspect_ratio: 비디오 비율
+            duration_seconds: 비디오 길이 (5-8초)
+            aspect_ratio: 비디오 비율 (16:9, 9:16, 1:1)
+            person_generation: 인물 생성 설정 (dont_allow, allow_adult, allow_all)
+            enhance_prompt: 프롬프트 향상 여부
+            number_of_videos: 생성할 비디오 수 (1-2)
 
         Returns:
-            생성된 비디오 정보
+            생성된 비디오 정보 (비동기 작업)
 
         Raises:
             GeminiApiError: API 호출 중 오류 발생 시
@@ -320,15 +326,21 @@ class GeminiAPI:
                     "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
                     "duration": duration_seconds,
                     "aspect_ratio": aspect_ratio,
+                    "person_generation": person_generation,
+                    "enhance_prompt": enhance_prompt,
+                    "number_of_videos": number_of_videos,
+                    "prompt_length": len(prompt),
+                    "actual_prompt": prompt
                 },
             )
 
             # Veo 비디오 생성 설정
             config = types.GenerateVideosConfig(
-                number_of_videos=1,
+                number_of_videos=number_of_videos,
                 duration_seconds=duration_seconds,
-                enhance_prompt=True,
+                enhance_prompt=enhance_prompt,
                 aspect_ratio=aspect_ratio,
+                person_generation=person_generation,
             )
 
             # Veo API 호출 (비동기 작업)
@@ -395,6 +407,87 @@ class GeminiAPI:
                 )
 
             raise GeminiApiError(f"Gemini 비디오 생성 오류: {str(e)}")
+
+    def check_video_operation(self, operation_name: str) -> Dict[str, Any]:
+        """비디오 생성 작업의 상태를 확인합니다.
+        
+        Args:
+            operation_name: 작업 이름
+            
+        Returns:
+            작업 상태 정보
+            
+        Raises:
+            GeminiApiError: API 호출 중 오류 발생 시
+        """
+        if not self.client:
+            raise GeminiApiError(
+                "❌ Gemini API를 사용할 수 없습니다.\n"
+                "🔑 GEMINI_API_KEY 또는 GOOGLE_API_KEY 환경 변수를 설정해주세요.\n"
+                "📖 https://aistudio.google.com/apikey 에서 API 키를 발급받을 수 있습니다."
+            )
+        
+        try:
+            operation = self.client.operations.get(operation_name)
+            
+            is_done = getattr(operation, "done", False)
+            operation_id = getattr(operation, "id", None)
+            
+            logger.log_info(
+                "비디오 작업 상태 확인",
+                {
+                    "operation_name": operation_name,
+                    "operation_id": operation_id,
+                    "is_done": is_done,
+                    "operation_type": type(operation).__name__,
+                }
+            )
+            
+            result = {
+                "operation_name": operation_name,
+                "operation_id": operation_id,
+                "done": is_done,
+                "status": "completed" if is_done else "processing"
+            }
+            
+            if is_done and hasattr(operation, "result"):
+                operation_result = operation.result
+                if hasattr(operation_result, "generated_videos"):
+                    videos = operation_result.generated_videos
+                    result["videos"] = []
+                    
+                    for i, video in enumerate(videos):
+                        video_info = {
+                            "index": i,
+                            "uri": getattr(video, "uri", None),
+                            "state": getattr(video, "state", None),
+                        }
+                        
+                        # 비디오 바이트 데이터가 있는 경우
+                        if hasattr(video, "video_bytes") and video.video_bytes:
+                            video_info["video_bytes"] = video.video_bytes
+                            video_info["size_bytes"] = len(video.video_bytes)
+                        
+                        result["videos"].append(video_info)
+                    
+                    logger.log_info(
+                        "비디오 생성 완료",
+                        {
+                            "operation_name": operation_name,
+                            "videos_count": len(videos),
+                            "total_size": sum(v.get("size_bytes", 0) for v in result["videos"]),
+                        }
+                    )
+            
+            return result
+            
+        except Exception as e:
+            logger.log_error(
+                "비디오 작업 상태 확인 중 오류 발생",
+                e,
+                {"operation_name": operation_name}
+            )
+            raise GeminiApiError(f"비디오 작업 상태 확인 오류: {str(e)}")
 
     @retry(
         stop=stop_after_attempt(3),

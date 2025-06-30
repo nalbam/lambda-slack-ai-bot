@@ -48,13 +48,15 @@ class TaskExecutor:
             return self._execute_gemini_text_generation(task)
         elif task_type == 'gemini_image_analysis':
             return self._execute_gemini_image_analysis(task)
+        elif task_type == 'check_video_operation':
+            return self._execute_check_video_operation(task)
         else:
             logger.log_error(f"지원하지 않는 작업 타입: {task_type}", None, {
                 "task_id": task_id,
                 "supported_types": [
                     "text_generation", "image_generation", "image_analysis", 
                     "thread_summary", "gemini_text_generation", "gemini_image_generation",
-                    "gemini_video_generation", "gemini_image_analysis"
+                    "gemini_video_generation", "gemini_image_analysis", "check_video_operation"
                 ]
             })
             raise ValueError(f"지원하지 않는 작업 타입: {task_type}")
@@ -685,7 +687,10 @@ class TaskExecutor:
             response = gemini_api.generate_video(
                 prompt=english_prompt,
                 duration_seconds=duration,
-                aspect_ratio=aspect_ratio
+                aspect_ratio=aspect_ratio,
+                person_generation="allow_adult",
+                enhance_prompt=True,
+                number_of_videos=1
             )
             
             logger.log_info("Gemini 비디오 API 응답 받음", {
@@ -712,12 +717,13 @@ class TaskExecutor:
             })
             
             return {
-                'type': 'text',
-                'content': f"🎬 Gemini Veo로 비디오 생성을 시작했습니다.\n📝 원본 프롬프트: {original_prompt}\n🌍 영어 프롬프트: {english_prompt}\n⏱️ 예상 소요 시간: 1-3분\n🎥 길이: {duration}초\n🖼️ 비율: {aspect_ratio}\n\n{response.get('message', '비디오 생성이 진행 중입니다.')}",
+                'type': 'video_operation',
+                'content': f"🎬 Gemini Veo로 비디오 생성을 시작했습니다.\n📝 원본 프롬프트: {original_prompt}\n🌍 영어 프롬프트: {english_prompt}\n⏱️ 예상 소요 시간: 1-6분\n🎥 길이: {duration}초\n🖼️ 비율: {aspect_ratio}\n🔄 작업 ID: {response.get('operation_name', 'N/A')}\n\n{response.get('message', '비디오 생성이 진행 중입니다.')}",
                 'model': settings.GEMINI_VIDEO_MODEL,
                 'original_prompt': original_prompt,
                 'english_prompt': english_prompt,
-                'operation_info': response
+                'operation_info': response,
+                'status': 'processing'
             }
                 
         except Exception as e:
@@ -800,3 +806,97 @@ class TaskExecutor:
         except Exception as e:
             logger.log_error("Gemini 이미지 분석 실패", e, {"task_id": task['id']})
             raise e
+
+    def _execute_check_video_operation(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """비디오 생성 작업 상태 확인 실행"""
+        
+        try:
+            operation_name = task.get('operation_name')
+            if not operation_name:
+                raise ValueError("작업 이름이 제공되지 않았습니다")
+            
+            logger.log_info("비디오 작업 상태 확인 시작", {
+                "task_id": task['id'],
+                "operation_name": operation_name
+            })
+            
+            # Gemini API를 통해 작업 상태 확인
+            result = gemini_api.check_video_operation(operation_name)
+            
+            if result.get('done'):
+                videos = result.get('videos', [])
+                if videos:
+                    # 완료된 비디오가 있는 경우
+                    video_count = len(videos)
+                    total_size = sum(v.get('size_bytes', 0) for v in videos)
+                    
+                    logger.log_info("비디오 생성 완료 확인됨", {
+                        "task_id": task['id'],
+                        "operation_name": operation_name,
+                        "video_count": video_count,
+                        "total_size": total_size
+                    })
+                    
+                    content = f"✅ 비디오 생성이 완료되었습니다!\n🎬 생성된 비디오: {video_count}개\n📊 총 크기: {total_size:,} bytes\n🔄 작업 ID: {operation_name}"
+                    
+                    # 실제 비디오 파일 업로드는 별도 처리 필요
+                    # (비디오 바이트 데이터를 Slack에 업로드하는 로직 추가 가능)
+                    
+                    return {
+                        'type': 'video_completed',
+                        'content': content,
+                        'model': settings.GEMINI_VIDEO_MODEL,
+                        'operation_name': operation_name,
+                        'videos': videos,
+                        'status': 'completed'
+                    }
+                else:
+                    # 완료되었지만 비디오가 없는 경우
+                    logger.log_warning("비디오 작업이 완료되었지만 결과가 없음", {
+                        "task_id": task['id'],
+                        "operation_name": operation_name
+                    })
+                    
+                    return {
+                        'type': 'text',
+                        'content': f"⚠️ 비디오 생성이 완료되었지만 결과를 찾을 수 없습니다.\n🔄 작업 ID: {operation_name}",
+                        'model': 'system',
+                        'status': 'completed_no_result'
+                    }
+            else:
+                # 아직 진행 중인 경우
+                logger.log_info("비디오 생성 여전히 진행 중", {
+                    "task_id": task['id'],
+                    "operation_name": operation_name
+                })
+                
+                return {
+                    'type': 'text',
+                    'content': f"⏳ 비디오 생성이 아직 진행 중입니다.\n🔄 작업 ID: {operation_name}\n💭 조금 더 기다려주세요...",
+                    'model': settings.GEMINI_VIDEO_MODEL,
+                    'operation_name': operation_name,
+                    'status': 'processing'
+                }
+                
+        except Exception as e:
+            logger.log_error("비디오 작업 상태 확인 실패", e, {
+                "task_id": task['id'],
+                "operation_name": task.get('operation_name')
+            })
+            
+            return {
+                'type': 'text',
+                'content': f"❌ 비디오 작업 상태 확인 실패: {str(e)}",
+                'model': 'system',
+                'status': 'error'
+            }
+
+    def _contains_korean(self, text: str) -> bool:
+        """텍스트에 한국어가 포함되어 있는지 확인합니다."""
+        if not text:
+            return False
+        
+        for char in text:
+            if '가' <= char <= '힣' or 'ㄱ' <= char <= 'ㅎ' or 'ㅏ' <= char <= 'ㅣ':
+                return True
+        return False
