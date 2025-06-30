@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import base64
+import requests
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -53,9 +54,77 @@ class GeminiTester:
             print("❌ GEMINI_API_KEY 또는 GOOGLE_API_KEY가 설정되지 않았습니다.")
             sys.exit(1)
         
+        # output 디렉토리 생성
+        self.output_dir = Path(__file__).parent / "output"
+        self.output_dir.mkdir(exist_ok=True)
+        
         self.gemini_api = GeminiAPI()
         self.client = genai.Client(api_key=self.api_key)
         print(f"✅ Gemini API 키 확인 (키: {self.api_key[:10]}...)")
+        print(f"📁 파일 저장 경로: {self.output_dir}")
+    
+    def save_image_bytes(self, image_bytes: bytes, filename: str) -> str:
+        """이미지 바이트 데이터를 파일로 저장합니다.
+        
+        Args:
+            image_bytes: 이미지 바이트 데이터
+            filename: 저장할 파일명
+            
+        Returns:
+            저장된 파일의 전체 경로
+        """
+        try:
+            file_path = self.output_dir / filename
+            with open(file_path, 'wb') as f:
+                f.write(image_bytes)
+            
+            return str(file_path)
+        except Exception as e:
+            print(f"⚠️ 이미지 저장 실패: {e}")
+            return ""
+    
+    def save_video_bytes(self, video_bytes: bytes, filename: str) -> str:
+        """비디오 바이트 데이터를 파일로 저장합니다.
+        
+        Args:
+            video_bytes: 비디오 바이트 데이터
+            filename: 저장할 파일명
+            
+        Returns:
+            저장된 파일의 전체 경로
+        """
+        try:
+            file_path = self.output_dir / filename
+            with open(file_path, 'wb') as f:
+                f.write(video_bytes)
+            
+            return str(file_path)
+        except Exception as e:
+            print(f"⚠️ 비디오 저장 실패: {e}")
+            return ""
+    
+    def download_and_save_file(self, file_url: str, filename: str) -> str:
+        """URL에서 파일을 다운로드하고 저장합니다.
+        
+        Args:
+            file_url: 다운로드할 파일 URL
+            filename: 저장할 파일명
+            
+        Returns:
+            저장된 파일의 전체 경로
+        """
+        try:
+            response = requests.get(file_url, timeout=30)
+            response.raise_for_status()
+            
+            file_path = self.output_dir / filename
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            
+            return str(file_path)
+        except Exception as e:
+            print(f"⚠️ 파일 다운로드 실패: {e}")
+            return ""
     
     def test_text_generation(self) -> Dict[str, Any]:
         """텍스트 생성 테스트"""
@@ -137,6 +206,30 @@ class GeminiTester:
                 end_time = time.time()
                 
                 has_images = bool(response.get('images') or response.get('candidates') or response.get('generated_images'))
+                saved_path = ""
+                
+                # 이미지가 생성된 경우 저장 시도
+                if has_images:
+                    try:
+                        # 이미지 데이터 추출
+                        image_data = None
+                        if response.get('generated_images') and len(response['generated_images']) > 0:
+                            image_data = response['generated_images'][0]
+                        elif response.get('images') and len(response['images']) > 0:
+                            image_data = response['images'][0]
+                        elif response.get('candidates') and len(response['candidates']) > 0:
+                            image_data = response['candidates'][0]
+                        
+                        if image_data and hasattr(image_data, 'image_bytes') and image_data.image_bytes:
+                            timestamp = time.strftime("%Y%m%d_%H%M%S")
+                            filename = f"gemini_image_test_{i}_{timestamp}.png"
+                            saved_path = self.save_image_bytes(image_data.image_bytes, filename)
+                        elif image_data and hasattr(image_data, 'image') and hasattr(image_data.image, 'data'):
+                            timestamp = time.strftime("%Y%m%d_%H%M%S")
+                            filename = f"gemini_image_test_{i}_{timestamp}.png"
+                            saved_path = self.save_image_bytes(image_data.image.data, filename)
+                    except Exception as save_error:
+                        print(f"⚠️ 이미지 저장 중 오류: {save_error}")
                 
                 result = {
                     "test_number": i,
@@ -145,12 +238,15 @@ class GeminiTester:
                     "response_time": round(end_time - start_time, 2),
                     "model": settings.GEMINI_IMAGE_MODEL,
                     "has_images": has_images,
-                    "response_keys": list(response.keys()) if response else []
+                    "response_keys": list(response.keys()) if response else [],
+                    "saved_path": saved_path
                 }
                 
                 if has_images:
                     print(f"✅ 성공 - {result['response_time']}초")
                     print(f"📊 응답 구조: {result['response_keys']}")
+                    if saved_path:
+                        print(f"💾 저장된 파일: {saved_path}")
                 else:
                     print(f"⚠️ 이미지 생성되지 않음 - {result['response_time']}초")
                 
@@ -215,6 +311,34 @@ class GeminiTester:
                 print(f"✅ 비디오 작업 시작 - {result['response_time']}초")
                 print(f"🔄 작업 ID: {result['operation_name']}")
                 print(f"📄 메시지: {result['message']}")
+                
+                # 비디오 작업 완료 확인 (짧은 대기 후 한 번만 시도)
+                if result['operation_name']:
+                    try:
+                        print("⏳ 잠시 대기 후 작업 상태 확인...")
+                        time.sleep(10)  # 10초 대기
+                        
+                        operation_result = self.gemini_api.check_video_operation(result['operation_name'])
+                        result['operation_status'] = operation_result.get('status')
+                        
+                        if operation_result.get('done') and operation_result.get('videos'):
+                            videos = operation_result['videos']
+                            print(f"🎉 비디오 생성 완료! ({len(videos)}개)")
+                            
+                            # 비디오 저장 시도
+                            for idx, video in enumerate(videos):
+                                if video.get('video_bytes'):
+                                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                                    filename = f"gemini_video_test_{i}_{idx+1}_{timestamp}.mp4"
+                                    saved_path = self.save_video_bytes(video['video_bytes'], filename)
+                                    if saved_path:
+                                        print(f"💾 비디오 저장됨: {saved_path}")
+                                        result[f'video_{idx+1}_path'] = saved_path
+                        else:
+                            print("⏳ 비디오 생성이 아직 진행 중입니다.")
+                            
+                    except Exception as check_error:
+                        print(f"⚠️ 작업 상태 확인 중 오류: {check_error}")
                 
                 results.append(result)
                 
@@ -328,6 +452,24 @@ class GeminiTester:
                 end_time = time.time()
                 
                 has_audio = bool(response.get('audio_data'))
+                saved_path = ""
+                
+                # 음성이 생성된 경우 저장 시도
+                if has_audio:
+                    try:
+                        audio_data = response.get('audio_data')
+                        if audio_data and hasattr(audio_data, 'content') and hasattr(audio_data.content, 'parts'):
+                            # audio data에서 바이트 추출
+                            for part in audio_data.content.parts:
+                                if hasattr(part, 'inline_data') and part.inline_data:
+                                    import base64
+                                    audio_bytes = base64.b64decode(part.inline_data.data)
+                                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                                    filename = f"gemini_speech_test_{i}_{timestamp}.wav"
+                                    saved_path = self.save_video_bytes(audio_bytes, filename)  # 음성도 바이너리 데이터이므로 같은 함수 사용
+                                    break
+                    except Exception as save_error:
+                        print(f"⚠️ 음성 저장 중 오류: {save_error}")
                 
                 result = {
                     "test_number": i,
@@ -335,11 +477,14 @@ class GeminiTester:
                     "text": text,
                     "response_time": round(end_time - start_time, 2),
                     "has_audio": has_audio,
-                    "voice": response.get('voice')
+                    "voice": response.get('voice'),
+                    "saved_path": saved_path
                 }
                 
                 if has_audio:
                     print(f"✅ 성공 - {result['response_time']}초")
+                    if saved_path:
+                        print(f"💾 저장된 파일: {saved_path}")
                 else:
                     print(f"⚠️ 음성 생성되지 않음 - {result['response_time']}초")
                 
