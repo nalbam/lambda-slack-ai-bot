@@ -212,24 +212,47 @@ class GeminiTester:
                 if has_images:
                     try:
                         # 이미지 데이터 추출
-                        image_data = None
-                        if response.get('generated_images') and len(response['generated_images']) > 0:
-                            image_data = response['generated_images'][0]
-                        elif response.get('images') and len(response['images']) > 0:
-                            image_data = response['images'][0]
-                        elif response.get('candidates') and len(response['candidates']) > 0:
-                            image_data = response['candidates'][0]
+                        image_bytes = None
                         
-                        if image_data and hasattr(image_data, 'image_bytes') and image_data.image_bytes:
+                        # 1. generated_images에서 추출 시도 (Gemini API v1beta 방식)
+                        if response.get('generated_images'):
+                            for img in response['generated_images']:
+                                if hasattr(img, 'image') and hasattr(img.image, 'image_bytes'):
+                                    image_bytes = img.image.image_bytes
+                                    break
+                                elif hasattr(img, 'image_bytes'):
+                                    image_bytes = img.image_bytes
+                                    break
+                        
+                        # 2. candidates에서 추출 시도 (차선책)
+                        if not image_bytes and response.get('candidates'):
+                            for candidate in response['candidates']:
+                                if hasattr(candidate, 'image') and hasattr(candidate.image, 'image_bytes'):
+                                    image_bytes = candidate.image.image_bytes
+                                    break
+                                elif hasattr(candidate, 'image_bytes'):
+                                    image_bytes = candidate.image_bytes
+                                    break
+                        
+                        # 3. images에서 추출 시도 (차선책)
+                        if not image_bytes and response.get('images'):
+                            for img in response['images']:
+                                if hasattr(img, 'image') and hasattr(img.image, 'image_bytes'):
+                                    image_bytes = img.image.image_bytes
+                                    break
+                                elif hasattr(img, 'image_bytes'):
+                                    image_bytes = img.image_bytes
+                                    break
+                        
+                        # 이미지 바이트가 있으면 저장
+                        if image_bytes:
                             timestamp = time.strftime("%Y%m%d_%H%M%S")
                             filename = f"gemini_image_test_{i}_{timestamp}.png"
-                            saved_path = self.save_image_bytes(image_data.image_bytes, filename)
-                        elif image_data and hasattr(image_data, 'image') and hasattr(image_data.image, 'data'):
-                            timestamp = time.strftime("%Y%m%d_%H%M%S")
-                            filename = f"gemini_image_test_{i}_{timestamp}.png"
-                            saved_path = self.save_image_bytes(image_data.image.data, filename)
+                            saved_path = self.save_image_bytes(image_bytes, filename)
+                            
                     except Exception as save_error:
                         print(f"⚠️ 이미지 저장 중 오류: {save_error}")
+                        saved_path = ""
                 
                 result = {
                     "test_number": i,
