@@ -200,9 +200,9 @@ def reply_image(prompt, say, channel, thread_ts, latest_ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
-        quality=IMAGE_QUALITY,
+        # quality=IMAGE_QUALITY,
         size=IMAGE_SIZE,
-        style=IMAGE_STYLE,
+        # style=IMAGE_STYLE,
         n=1,
     )
 
