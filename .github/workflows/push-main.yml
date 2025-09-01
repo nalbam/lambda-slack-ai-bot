@@ -11,7 +11,9 @@ on:
 
 env:
   AWS_REGION: "us-east-1"
-  AWS_ROLE_ARN: "arn:aws:iam::968005369378:role/lambda-slack-ai-bot"
+  AWS_ROLE_NAME: "lambda-slack-ai-bot"
+
+  STAGE: "prod"
 
   BOT_CURSOR: ${{ vars.BOT_CURSOR }}
   DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
@@ -19,6 +21,7 @@ env:
   SYSTEM_MESSAGE: ${{ vars.SYSTEM_MESSAGE }}
   TEMPERATURE: ${{ vars.TEMPERATURE }}
 
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -71,9 +74,9 @@ jobs:
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-to-assume: "arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}"
           role-session-name: github-actions-ci-bot
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to AWS Lambda 🚀
-        run: npx serverless deploy --region ${{ env.AWS_REGION }}
+        run: npx serverless deploy --stage ${{ env.STAGE }} --region ${{ env.AWS_REGION }}
