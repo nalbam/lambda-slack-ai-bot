@@ -530,7 +530,7 @@ def replace_emoji_pattern(text):
 
 
 # Extract content from the message
-def content_from_message(prompt, event, user):
+def content_from_message(prompt, event, user=None):
     type = "text"
 
     if KEYWARD_IMAGE in prompt:
@@ -539,13 +539,18 @@ def content_from_message(prompt, event, user):
         type = "emoji"
         prompt = replace_emoji_pattern(prompt)
 
-    user_info = app.client.users_info(user=user)
-    print("user_info: {}".format(user_info))
+    if user != None:
+        text = prompt
+    else:
+        user_info = app.client.users_info(user=user)
+        print("user_info: {}".format(user_info))
 
-    user_name = user_info.get("user").get("profile").get("display_name")
+        user_name = user_info.get("user").get("profile").get("display_name")
+
+        text = "{}: {}".format(user_name, prompt)
 
     content = []
-    content.append({"type": "text", "text": "{}: {}".format(user_name, prompt)})
+    content.append({"type": "text", "text": text})
 
     if "files" in event:
         files = event.get("files", [])
@@ -610,7 +615,7 @@ def handle_message(body: dict, say: Say):
     user = event["user"]
     client_msg_id = event["client_msg_id"]
 
-    content, type = content_from_message(prompt, event, user)
+    content, type = content_from_message(prompt, event, None)
 
     # Use thread_ts=None for regular messages, and user ID for DMs
     if type == "image":
