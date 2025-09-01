@@ -61,6 +61,7 @@ jobs:
 
       - name: Set up environment variables 📝
         run: |
+          echo "STAGE=${STAGE}" >> .env
           echo "BOT_CURSOR=${BOT_CURSOR}" >> .env
           echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
           echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
