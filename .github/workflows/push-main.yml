@@ -19,7 +19,6 @@ env:
   DYNAMODB_TABLE_NAME: ${{ vars.DYNAMODB_TABLE_NAME }}
   OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
   SYSTEM_MESSAGE: ${{ vars.SYSTEM_MESSAGE }}
-  TEMPERATURE: ${{ vars.TEMPERATURE }}
 
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -70,7 +69,6 @@ jobs:
           echo "OPENAI_MODEL=${OPENAI_MODEL}" >> .env
           echo "OPENAI_ORG_ID=${OPENAI_ORG_ID}" >> .env
           echo "SYSTEM_MESSAGE=${SYSTEM_MESSAGE}" >> .env
-          echo "TEMPERATURE=${TEMPERATURE}" >> .env
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4

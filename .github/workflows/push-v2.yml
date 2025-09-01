@@ -17,7 +17,6 @@ env:
   BOT_CURSOR: ${{ vars.BOT_CURSOR }}
   OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
   SYSTEM_MESSAGE: ${{ vars.SYSTEM_MESSAGE }}
-  TEMPERATURE: ${{ vars.TEMPERATURE }}
 
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -67,7 +66,6 @@ jobs:
           echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}" >> .env
           echo "SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}" >> .env
           echo "SYSTEM_MESSAGE=${SYSTEM_MESSAGE}" >> .env
-          echo "TEMPERATURE=${TEMPERATURE}" >> .env
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4

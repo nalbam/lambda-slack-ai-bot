@@ -35,8 +35,6 @@ IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid").strip()  # vivid, natural
 # Set up System messages
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None").strip()
 
-TEMPERATURE = float(os.environ.get("TEMPERATURE", 0))
-
 MAX_LEN_SLACK = int(os.environ.get("MAX_LEN_SLACK", 3000))
 MAX_LEN_OPENAI = int(os.environ.get("MAX_LEN_OPENAI", 4000))
 
@@ -173,7 +171,6 @@ def reply_text(messages, say, channel, thread_ts, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
-        # temperature=TEMPERATURE,
         stream=True,
         user=user,
     )
@@ -421,7 +418,6 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id, type=No
             response = openai.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=messages,
-                # temperature=TEMPERATURE,
             )
 
             # print("image_generate: {}".format(response))
@@ -459,7 +455,6 @@ def image_generate(say: Say, thread_ts, content, channel, client_msg_id, type=No
         response = openai.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
-            # temperature=TEMPERATURE,
         )
 
         # print("image_generate: {}".format(response))
