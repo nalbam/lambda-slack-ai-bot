@@ -28,9 +28,7 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"].strip()
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1").strip()
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "dall-e-3").strip()
-IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "hd").strip()  # standard, hd
 IMAGE_SIZE = os.environ.get("IMAGE_SIZE", "1024x1024").strip()
-IMAGE_STYLE = os.environ.get("IMAGE_STYLE", "vivid").strip()  # vivid, natural
 
 # Set up System messages
 SYSTEM_MESSAGE = os.environ.get("SYSTEM_MESSAGE", "None").strip()
@@ -200,9 +198,7 @@ def reply_image(prompt, say, channel, thread_ts, latest_ts):
     response = openai.images.generate(
         model=IMAGE_MODEL,
         prompt=prompt,
-        # quality=IMAGE_QUALITY,
         size=IMAGE_SIZE,
-        # style=IMAGE_STYLE,
         n=1,
     )
 
