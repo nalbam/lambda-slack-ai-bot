@@ -540,14 +540,14 @@ def content_from_message(prompt, event, user=None):
         prompt = replace_emoji_pattern(prompt)
 
     if user != None:
-        text = prompt
-    else:
         user_info = app.client.users_info(user=user)
         print("user_info: {}".format(user_info))
 
         user_name = user_info.get("user").get("profile").get("display_name")
 
         text = "{}: {}".format(user_name, prompt)
+    else:
+        text = prompt
 
     content = []
     content.append({"type": "text", "text": text})
