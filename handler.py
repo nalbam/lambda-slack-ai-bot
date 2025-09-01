@@ -173,7 +173,7 @@ def reply_text(messages, say, channel, thread_ts, latest_ts, user):
     stream = openai.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
-        temperature=TEMPERATURE,
+        # temperature=TEMPERATURE,
         stream=True,
         user=user,
     )
