@@ -268,7 +268,7 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
             )
 
         res_messages = response.get("messages", [])
-        first_ts = str(res_messages[0].get("ts"))
+        # first_ts = str(res_messages[0].get("ts"))
 
         res_messages.reverse()
         res_messages.pop(0)  # remove the first message
@@ -281,24 +281,26 @@ def conversations_replies(channel, ts, client_msg_id, messages=[], type=""):
             if message.get("bot_id", "") != "":
                 role = "assistant"
 
-            # prompt 에 이모지 키워드가 있고, 첫번째 메시지에 리액션이 있으면 리액션을 추가
-            if type == "emoji" and first_ts == str(message.get("ts")):
-                reactions = get_reactions(message.get("reactions", []))
-                if reactions != "":
-                    messages.append(
-                        {
-                            "role": role,
-                            "content": "reactions {}".format(reactions),
-                        }
-                    )
+            # # prompt 에 이모지 키워드가 있고, 첫번째 메시지에 리액션이 있으면 리액션을 추가
+            # if type == "emoji" and first_ts == str(message.get("ts")):
+            #     reactions = get_reactions(message.get("reactions", []))
+            #     if reactions != "":
+            #         messages.append(
+            #             {
+            #                 "role": role,
+            #                 "content": "reactions {}".format(reactions),
+            #             }
+            #         )
 
-            # 메세지에 유저 이름을 추가
-            user_info = app.client.users_info(user=message.get("user"))
-            user_name = user_info.get("user").get("profile").get("display_name")
+            # # 메세지에 유저 이름을 추가
+            # user_info = app.client.users_info(user=message.get("user"))
+            # user_name = user_info.get("user").get("profile").get("display_name")
+            # content = "{}: {}".format(user_name, message.get("text", ""))
+
             messages.append(
                 {
                     "role": role,
-                    "content": "{}: {}".format(user_name, message.get("text", "")),
+                    "content": message.get("text", ""),
                 }
             )
 
